@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
         filters: [
             { key: 'original_mark_id', type: 'select', label: 'Марка',           enabled: true },
             { key: 'model',            type: 'select', label: 'Модель',          enabled: true, dependsOn: 'original_mark_id' },
-            { key: 'generation',       type: 'select', label: 'Поколение',       enabled: false, dependsOn: 'model' },
+            { key: 'generation',       type: 'select', label: 'Поколение',       enabled: true, dependsOn: 'model' },
             { key: 'price',            type: 'minmax', label: 'Стоимость, ₽',    enabled: true, step: 100000 },
             { key: 'year',             type: 'minmax', label: 'Год выпуска',     enabled: true, step: 1 },
             { key: 'run',              type: 'minmax', label: 'Пробег, км',      enabled: true, step: 10000 },
@@ -21,9 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'gearbox',          type: 'select', label: 'Коробка передач', enabled: true },
             { key: 'engine_type',      type: 'select', label: 'Двигатель',       enabled: true },
             { key: 'engine_volume',    type: 'minmax', label: 'Объем, л',        enabled: true, step: 0.5},
-            { key: 'drive',            type: 'toggle', label: 'Тип привода',     enabled: true },
+            { key: 'drive',            type: 'select', label: 'Тип привода',     enabled: true },
             { key: 'color',            type: 'select', label: 'Цвет кузова',     enabled: true },
-            { key: 'pts',              type: 'toggle', label: 'ПТС',             enabled: true },
+            { key: 'pts',              type: 'select', label: 'ПТС',             enabled: true },
             { key: 'owners_number',    type: 'select', label: 'Владельцев',      enabled: true },
             { key: 'wheel',            type: 'toggle', label: 'Руль',            enabled: true },
             { key: 'salon',            type: 'select', label: 'Автосалон',       enabled: false }
