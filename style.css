@@ -466,10 +466,21 @@
       background: var(--bg); display: flex; flex-direction: column; overflow-y: auto;
     }
     .udm-catalog .pm-gallery {
-      position: relative; aspect-ratio: 4 / 3; background: var(--bg);
-      overflow: hidden; flex-shrink: 0;
+      position: relative; aspect-ratio: 4 / 3; background: var(--bg); overflow: hidden; flex-shrink: 0;
     }
-    .udm-catalog .pm-gallery img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .udm-catalog .pm-gallery-track {
+      display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; /* Firefox */ -ms-overflow-style: none; /* IE/Edge */
+    }
+    .udm-catalog .pm-gallery-track::-webkit-scrollbar { 
+      display: none; 
+    }
+    .udm-catalog .pm-gallery-track img {
+      flex: 0 0 100%;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      scroll-snap-align: center;
+    }
     .udm-catalog .pm-nav-prev, .udm-catalog .pm-nav-next {
       position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px;
       background: rgba(255, 255, 255, 0.95); border: none; border-radius: 50%; cursor: pointer;
@@ -634,8 +645,8 @@
       .udm-catalog .modal-overlay, .udm-catalog .pm-box { transition: none !important; }
     }
     
-    /* ================================================================
-   RESPONSIVE — MODAL (mobile)
+/* ================================================================
+RESPONSIVE — MODAL (mobile)
 ================================================================ */
 @media (max-width: 880px) {
     .udm-catalog .modal-overlay {
@@ -668,16 +679,13 @@
     }
     
     .udm-catalog .pm-gallery {
-        aspect-ratio: 4 / 3;
-        background: var(--bg);
-        position: relative;
-    }
-    
-    .udm-catalog .pm-gallery img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-    }
+          aspect-ratio: 4 / 3;
+          min-height: 0;
+          max-height: none;
+      }
+      .udm-catalog .pm-gallery-track img {
+          object-fit: contain;
+      }
     
     /* Кнопки навигации - меньше на мобильных */
     .udm-catalog .pm-nav-prev,
