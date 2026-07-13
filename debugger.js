@@ -1,10 +1,10 @@
 /**
- * UDM CATALOG DEBUGGER (Standalone)
- * Инструмент для профилирования, логирования и отладки каталога.
+ * MAKE CATALOG DEBUGGER (Standalone)
+ * Подключите этот скрипт ВЫШЕ основного script.js при отладке
  */
 (function() {
     const DEBUG = true; 
-    const DEBUG_VERBOSE_EVENTS = false; // Вывод каждого клика/свайпа
+    const DEBUG_VERBOSE_EVENTS = false;
     const DEBUG_TABLE_LIMIT = 130;
     let debugCallCounter = 0;
 
@@ -16,7 +16,7 @@
     }
 
     function debugPrefix(scope) {
-        return `[UDM-DEBUG][${debugNow()}]` + (scope ? `[${scope}]` : '');
+        return `[MAKE-DEBUG][${debugNow()}]` + (scope ? `[${scope}]` : '');
     }
 
     function debugLog(scope, ...args) { console.log(debugPrefix(scope), ...args); }
@@ -51,7 +51,6 @@
         catch(e) { return 'n/a'; }
     }
 
-    // Обертка для профилирования функций (замер времени, аргументы, результат)
     function debugWrap(fn, name, options = {}) {
         if (typeof fn !== 'function' || fn.__debugWrapped) return fn;
         const wrapped = function(...args) {
@@ -86,7 +85,6 @@
         return wrapped;
     }
 
-    // Обертка для всех методов класса
     function debugWrapPrototype(proto, className, verboseMethods = []) {
         Object.getOwnPropertyNames(proto).forEach((methodName) => {
             if (methodName === 'constructor') return;
@@ -99,8 +97,7 @@
         debugLog('debugWrapPrototype', `Методы класса ${className} обернуты в логирование`);
     }
 
-    // Экспортируем глобальный API для утилит
-    window.__UDM_DEBUG_UTILS__ = {
+    window.__MAKE_DEBUG_UTILS__ = {
         DEBUG, debugLog, debugInfo, debugWarn, debugError, 
         debugCheck, debugTable, debugWrap, debugWrapPrototype
     };
