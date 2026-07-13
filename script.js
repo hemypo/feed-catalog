@@ -4,8 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const APP_CONFIG = {
         feedUrls: [
-            'https://dhost.makeagency.ru/playback/udm-feed.json',
-            'https://s3.hommenest.ru/digital/backup/udm-feed.json'
+            'https://dhost.makeagency.ru/playback/test-catalog-feed.json,
+            'https://s3.hommenest.ru/digital/backup/test-catalog-feed.json'
         ],
         cacheName: 'make_catalog_cache',
         cacheTTL: 25 * 60 * 1000, 
