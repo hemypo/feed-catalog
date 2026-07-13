@@ -22,12 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'body_type',        type: 'select', label: 'Тип кузова',      enabled: true },
             { key: 'gearbox',          type: 'select', label: 'Коробка передач', enabled: true },
             { key: 'engine_type',      type: 'select', label: 'Двигатель',       enabled: true },
-            { key: 'engine_volume',    type: 'select', label: 'Объем, л',        enabled: true },
-            { key: 'drive',            type: 'select', label: 'Тип привода',     enabled: true },
+            { key: 'engine_volume',    type: 'minmax', label: 'Объем, л',        enabled: true, step: 0.5},
+            { key: 'drive',            type: 'toggle', label: 'Тип привода',     enabled: true },
             { key: 'color',            type: 'select', label: 'Цвет кузова',     enabled: true },
-            { key: 'pts',              type: 'toggle', label: 'ПТС',             enabled: true, options: [{val: 'Оригинал', label: 'Оригинал'}, {val: 'Дубликат', label: 'Дубликат'}] },
+            { key: 'pts',              type: 'toggle', label: 'ПТС',             enabled: true },
             { key: 'owners_number',    type: 'select', label: 'Владельцев',      enabled: true },
-            { key: 'wheel',            type: 'toggle', label: 'Руль',            enabled: true, options: [{val: 'Левый', label: 'Левый'}, {val: 'Правый', label: 'Правый'}] },
+            { key: 'wheel',            type: 'toggle', label: 'Руль',            enabled: true },
             { key: 'salon',            type: 'select', label: 'Автосалон',       enabled: false }
         ]
     };
@@ -432,19 +432,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <select class="f-select minmax-max" id="sel-${f.key}-max"><option value="">До</option></select>
                 </div>`;
             } else if (f.type === 'toggle') {
-                html += `<div class="toggle-row" id="tog-${f.key}">
-                  <button type="button" class="toggle-opt is-active" data-val="all">Все</button>`;
-                if (f.options) {
-                    f.options.forEach(opt => {
-                        html += `<button type="button" class="toggle-opt" data-val="${escapeHtml(opt.val)}">${escapeHtml(opt.label)}</button>`;
-                    });
-                }
-                html += `</div>`;
+                // Генерируем контейнер, кнопки наполним при инициализации
+                html += `<div class="toggle-row" id="tog-${f.key}" data-key="${f.key}"></div>`;
             }
             html += `</div><div class="f-sep"></div>`;
         });
         
-        // Добавляем сортировку прямо в панель фильтров
         html += `
         <div class="filter-group sort-group">
             <label class="filter-label">Сортировка</label>
@@ -510,18 +503,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function initFilters() {
+function initFilters() {
         if (!hasFullCatalog) return;
         renderFilters();
-        
-        // Обновляем ссылки на DOM-элементы, так как они были сгенерированы заново
-        FDOM.sort = document.getElementById('sort-select');
         
         const getUnique = key => [...new Set(cars.map(c => c[key]).filter(Boolean))].sort();
         
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
-            
-            // Инициализация Select и Multiselect
             if (f.type === 'select') {
                 const el = document.getElementById(`sel-${f.key}`);
                 if (el) {
@@ -538,44 +526,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!f.dependsOn) ms.setOptions(getUnique(f.key));
                     window.filterInstances.multiselects[f.key] = ms;
                 }
-            } 
-            
-            // Логика округления и генерации диапазонов (minmax)
-            else if (f.type === 'minmax') {
+            } else if (f.type === 'minmax') {
                 const values = cars.map(c => parseInt(c[f.key])).filter(v => !isNaN(v));
                 if (values.length) {
-                    let min = Math.min(...values);
-                    let max = Math.max(...values);
-                    
-                    if (f.step) {
-                        min = Math.floor(min / f.step) * f.step;
-                        max = Math.ceil(max / f.step) * f.step;
-                    }
-
+                    let min = Math.floor(Math.min(...values) / f.step) * f.step;
+                    let max = Math.ceil(Math.max(...values) / f.step) * f.step;
                     const minEl = document.getElementById(`sel-${f.key}-min`);
                     const maxEl = document.getElementById(`sel-${f.key}-max`);
-                    
                     let optsHtml = '';
                     for (let v = min; v <= max; v += f.step) {
-                        const label = f.key === 'year' ? v : formatNum(v);
-                        optsHtml += `<option value="${v}">${label}</option>`;
+                        optsHtml += `<option value="${v}">${formatNum(v)}</option>`;
                     }
-                    
-                    if (minEl) {
-                        minEl.innerHTML += optsHtml;
-                        minEl.addEventListener('change', debounce(applyFilters, 400));
-                    }
-                    if (maxEl) {
-                        maxEl.innerHTML += optsHtml;
-                        maxEl.addEventListener('change', debounce(applyFilters, 400));
-                    }
+                    if (minEl) { minEl.innerHTML += optsHtml; minEl.addEventListener('change', applyFilters); }
+                    if (maxEl) { maxEl.innerHTML += optsHtml; maxEl.addEventListener('change', applyFilters); }
                 }
-            } 
-            
-            // Делегирование событий Toggle
-            else if (f.type === 'toggle') {
+            } else if (f.type === 'toggle') {
                 const tog = document.getElementById(`tog-${f.key}`);
                 if (tog) {
+                    // Динамическая генерация кнопок для Toggle
+                    const uniqueVals = getUnique(f.key);
+                    let btnsHtml = `<button type="button" class="toggle-opt is-active" data-val="all">Все</button>`;
+                    uniqueVals.forEach(val => {
+                        btnsHtml += `<button type="button" class="toggle-opt" data-val="${escapeHtml(val)}">${escapeHtml(val)}</button>`;
+                    });
+                    tog.innerHTML = btnsHtml;
                     tog.addEventListener('click', (e) => {
                         const btn = e.target.closest('.toggle-opt');
                         if (btn) {
@@ -584,6 +558,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             applyFilters();
                         }
                     });
+                }
+            }
+        });
                 }
             }
         });
