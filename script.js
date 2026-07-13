@@ -59,6 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let currentPage = 1;
     let pageSize = 32;
+    
+    // ИСПРАВЛЕНИЕ: Выносим IntersectionObserver в глобальную область видимости
+    let lazyObserver = null;
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"><rect width="100%" height="100%" fill="#e2e8f0"/><text x="50%" y="50%" font-family="Arial" font-size="16" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Нет фото</text></svg>'
@@ -432,7 +435,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <select class="f-select minmax-max" id="sel-${f.key}-max"><option value="">До</option></select>
                 </div>`;
             } else if (f.type === 'toggle') {
-                // Генерируем контейнер, кнопки наполним при инициализации
                 html += `<div class="toggle-row" id="tog-${f.key}" data-key="${f.key}"></div>`;
             }
             html += `</div><div class="f-sep"></div>`;
@@ -503,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-function initFilters() {
+    function initFilters() {
         if (!hasFullCatalog) return;
         renderFilters();
         
@@ -543,7 +545,6 @@ function initFilters() {
             } else if (f.type === 'toggle') {
                 const tog = document.getElementById(`tog-${f.key}`);
                 if (tog) {
-                    // Динамическая генерация кнопок для Toggle
                     const uniqueVals = getUnique(f.key);
                     let btnsHtml = `<button type="button" class="toggle-opt is-active" data-val="all">Все</button>`;
                     uniqueVals.forEach(val => {
@@ -561,11 +562,10 @@ function initFilters() {
                 }
             }
         });
-                }
-            }
-        });
 
-        if (FDOM.sort) FDOM.sort.addEventListener('change', applyFilters);
+        // ИСПРАВЛЕНИЕ 1: Заменяем FDOM.sort на document.getElementById('sort-select')
+        const sortSelect = document.getElementById('sort-select');
+        if (sortSelect) sortSelect.addEventListener('change', applyFilters);
 
         document.getElementById('page-size')?.addEventListener('change', (e) => {
             pageSize = parseInt(e.target.value) || 32;
@@ -592,7 +592,9 @@ function initFilters() {
         if (!hasFullCatalog) return;
         
         updateDependencies();
-        const sortBy = FDOM.sort?.value || 'default';
+        
+        // ИСПРАВЛЕНИЕ 2: Заменяем FDOM.sort на document.getElementById('sort-select')
+        const sortBy = document.getElementById('sort-select')?.value || 'default';
 
         filteredCars = cars.filter(car => {
 
@@ -706,7 +708,9 @@ function initFilters() {
     document.getElementById('mob-overlay')?.addEventListener('click', closeDrawer);
 
     document.getElementById('clear-filters')?.addEventListener('click', () => {
-        if(FDOM.sort) FDOM.sort.value = 'default';
+        // ИСПРАВЛЕНИЕ 3: Заменяем FDOM.sort на document.getElementById('sort-select')
+        const sortEl = document.getElementById('sort-select');
+        if (sortEl) sortEl.value = 'default';
         
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
             if (f.type === 'multiselect') {
@@ -768,12 +772,18 @@ function initFilters() {
             </div>`;
     }
 
+    // ИСПРАВЛЕНИЕ 4: Используем глобальный lazyObserver и отключаем его перед созданием нового
     function renderCards(list, container) {
         if (!container) return;
         if (!list.length) { container.innerHTML = `<div class="no-results">Ничего не найдено</div>`; return; }
         container.innerHTML = list.map(car => createCardHTML(car)).join('');
         
-        const observer = new IntersectionObserver((entries, obs) => {
+        // Отключаем предыдущий observer для предотвращения утечки памяти
+        if (lazyObserver) {
+            lazyObserver.disconnect();
+        }
+        
+        lazyObserver = new IntersectionObserver((entries, obs) => {
             entries.forEach(entry => {
                 if(entry.isIntersecting) {
                     const img = entry.target;
@@ -783,7 +793,8 @@ function initFilters() {
                 }
             });
         });
-        container.querySelectorAll('img.lazy-image').forEach(img => observer.observe(img));
+        
+        container.querySelectorAll('img.lazy-image').forEach(img => lazyObserver.observe(img));
     }
 
     function bindGridEvents(container) {
