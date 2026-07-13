@@ -10,29 +10,25 @@ document.addEventListener('DOMContentLoaded', () => {
         cacheName: 'make_catalog_cache',
         cacheTTL: 25 * 60 * 1000, 
         
-        // ВАЖНО: dependsOn используется только для строгой иерархии (Марка -> Модель -> Поколение)
+        // ВНИМАНИЕ: Новый тип 'minmax' для генерации парных селектов (От и До)
+        // В options для 'toggle' задаются значения и подписи кнопок
         filters: [
-            { key: 'salon',            type: 'multiselect', label: 'Автосалон',       enabled: true },
-            { key: 'price',            type: 'range',       label: 'Стоимость, ₽',    enabled: true },
-            { key: 'run',              type: 'range',       label: 'Пробег, км',      enabled: true },
-            { key: 'year',             type: 'range',       label: 'Год выпуска',     enabled: true },
-            
-            // --- СТРОГАЯ ИЕРАРХИЯ ---
-            { key: 'original_mark_id', type: 'multiselect', label: 'Марка',           enabled: true },
-            { key: 'model',            type: 'select',      label: 'Модель',          enabled: true, dependsOn: 'original_mark_id' },
-            { key: 'generation',       type: 'select',      label: 'Поколение',       enabled: false, dependsOn: 'model' },
-            // ------------------------
-
-            { key: 'body_type',        type: 'multiselect', label: 'Тип кузова',      enabled: true }, 
-            { key: 'gearbox',          type: 'multiselect', label: 'Коробка передач', enabled: true },
-            { key: 'engine_type',      type: 'multiselect', label: 'Двигатель',       enabled: true },
-            { key: 'engine_volume',    type: 'range',       label: 'Объем, л',        enabled: true },
-            { key: 'engine_power',     type: 'range',       label: 'Мощность, л.с.',  enabled: false },
-            { key: 'drive',            type: 'toggle',      label: 'Тип привода',     enabled: true },
-            { key: 'color',            type: 'multiselect', label: 'Цвет кузова',     enabled: true },
-            { key: 'pts',              type: 'toggle',      label: 'ПТС',             enabled: true },
-            { key: 'owners_number',    type: 'range',       label: 'Владельцев',      enabled: true },
-            { key: 'wheel',            type: 'toggle',      label: 'Руль',            enabled: true }
+            { key: 'original_mark_id', type: 'select', label: 'Марка',           enabled: true },
+            { key: 'model',            type: 'select', label: 'Модель',          enabled: true, dependsOn: 'original_mark_id' },
+            { key: 'generation',       type: 'select', label: 'Поколение',       enabled: false, dependsOn: 'model' },
+            { key: 'price',            type: 'minmax', label: 'Стоимость, ₽',    enabled: true, step: 100000 },
+            { key: 'year',             type: 'minmax', label: 'Год выпуска',     enabled: true, step: 1 },
+            { key: 'run',              type: 'minmax', label: 'Пробег, км',      enabled: true, step: 10000 },
+            { key: 'body_type',        type: 'select', label: 'Тип кузова',      enabled: true },
+            { key: 'gearbox',          type: 'select', label: 'Коробка передач', enabled: true },
+            { key: 'engine_type',      type: 'select', label: 'Двигатель',       enabled: true },
+            { key: 'engine_volume',    type: 'select', label: 'Объем, л',        enabled: true },
+            { key: 'drive',            type: 'select', label: 'Тип привода',     enabled: true },
+            { key: 'color',            type: 'select', label: 'Цвет кузова',     enabled: true },
+            { key: 'pts',              type: 'toggle', label: 'ПТС',             enabled: true, options: [{val: 'Оригинал', label: 'Оригинал'}, {val: 'Дубликат', label: 'Дубликат'}] },
+            { key: 'owners_number',    type: 'select', label: 'Владельцев',      enabled: true },
+            { key: 'wheel',            type: 'toggle', label: 'Руль',            enabled: true, options: [{val: 'Левый', label: 'Левый'}, {val: 'Правый', label: 'Правый'}] },
+            { key: 'salon',            type: 'select', label: 'Автосалон',       enabled: false }
         ]
     };
 
@@ -49,8 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const FDOM = {
         cardsContainer: document.getElementById('cards-grid'),
         randomGrid: document.querySelector('[data-make-random-grid]'),
-        search: document.getElementById('search'),
-        sort: document.getElementById('sort-select'),
         pagination: document.getElementById('pagination-container')
     };
 
@@ -61,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let cars = [];
     let filteredCars = [];
     let lastLeadCar = null;
-    window.filterInstances = { multiselects: {}, ranges: {} };
+    window.filterInstances = { multiselects: {} };
     
     let currentPage = 1;
     let pageSize = 32;
@@ -163,8 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = new URL(window.location);
             const setP = (k, v) => (v && v !== 'default' && v !== 'all') ? url.searchParams.set(k, v) : url.searchParams.delete(k);
             
-            setP('search', FDOM.search?.value);
-            setP('sort', FDOM.sort?.value);
+            setP('sort', document.getElementById('sort-select')?.value);
 
             APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
                 if (f.type === 'multiselect') {
@@ -172,9 +165,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     setP(f.key, sel.join(','));
                 } else if (f.type === 'select') {
                     setP(f.key, document.getElementById(`sel-${f.key}`)?.value);
-                } else if (f.type === 'range') {
-                    setP(`${f.key}Min`, document.getElementById(`range-${f.key}-min`)?.value);
-                    setP(`${f.key}Max`, document.getElementById(`range-${f.key}-max`)?.value);
+                } else if (f.type === 'minmax') {
+                    setP(`${f.key}Min`, document.getElementById(`sel-${f.key}-min`)?.value);
+                    setP(`${f.key}Max`, document.getElementById(`sel-${f.key}-max`)?.value);
                 } else if (f.type === 'toggle') {
                     setP(f.key, document.querySelector(`#tog-${f.key} .is-active`)?.dataset.val);
                 }
@@ -184,8 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loadFiltersFromUrl() {
             if (!hasFullCatalog) return;
             const url = new URL(window.location);
-            if (url.searchParams.has('search') && FDOM.search) FDOM.search.value = url.searchParams.get('search');
-            if (url.searchParams.has('sort') && FDOM.sort) FDOM.sort.value = url.searchParams.get('sort');
+            
+            const sortEl = document.getElementById('sort-select');
+            if (sortEl && url.searchParams.has('sort')) sortEl.value = url.searchParams.get('sort');
 
             APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
                 if (f.type === 'multiselect') {
@@ -199,24 +193,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     const el = document.getElementById(`sel-${f.key}`);
                     if (el && url.searchParams.has(f.key)) {
                         const val = url.searchParams.get(f.key);
-                        // Вставляем опцию динамически, чтобы не потерять ее до обсчета зависимостей
                         if (!el.querySelector(`option[value="${val}"]`)) {
                             el.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`);
                         }
                         el.value = val;
                     }
-                } else if (f.type === 'range') {
-                    const minEl = document.getElementById(`range-${f.key}-min`);
-                    const maxEl = document.getElementById(`range-${f.key}-max`);
+                } else if (f.type === 'minmax') {
+                    const minEl = document.getElementById(`sel-${f.key}-min`);
+                    const maxEl = document.getElementById(`sel-${f.key}-max`);
                     if (minEl && url.searchParams.has(`${f.key}Min`)) minEl.value = url.searchParams.get(`${f.key}Min`);
                     if (maxEl && url.searchParams.has(`${f.key}Max`)) maxEl.value = url.searchParams.get(`${f.key}Max`);
-                    
-                    if (window.filterInstances.ranges[f.key]) {
-                        const slider = window.filterInstances.ranges[f.key];
-                        slider.currentMin = parseInt(minEl.value) || slider.min;
-                        slider.currentMax = parseInt(maxEl.value) || slider.max;
-                        slider.updateSlider();
-                    }
                 } else if (f.type === 'toggle') {
                     const val = url.searchParams.get(f.key);
                     if (val) {
@@ -422,101 +408,6 @@ document.addEventListener('DOMContentLoaded', () => {
         getSelectedValues() { return Array.from(this.selectedValues); }
     }
 
-    class FastRangeSlider {
-        constructor(key, minInputId, maxInputId) {
-            this.key = key;
-            this.minInput = document.getElementById(minInputId);
-            this.maxInput = document.getElementById(maxInputId);
-            this.track = document.getElementById(key + '-track');
-            this.fill = document.getElementById(key + '-fill');
-            this.thumbMin = document.getElementById(key + '-thumb-min');
-            this.thumbMax = document.getElementById(key + '-thumb-max');
-
-            const values = cars.map(c => parseInt(c[key])).filter(v => !isNaN(v));
-            this.min = values.length ? Math.min(...values) : 0; 
-            this.max = values.length ? Math.max(...values) : 0;
-            
-            this.currentMin = this.min; this.currentMax = this.max;
-            if(this.minInput) this.minInput.placeholder = `От ${this.min}`; 
-            if(this.maxInput) this.maxInput.placeholder = `До ${this.max}`;
-
-            this.isDragging = false; this.activeThumb = null; this.trackRect = null;
-            this.throttledUpdate = this.throttle(this.updateSlider.bind(this), 16);
-            this.init(); this.updateSlider();
-        }
-        throttle(func, limit) {
-            let inT; return function() { if (!inT) { func.apply(this, arguments); inT = true; setTimeout(() => inT = false, limit); } };
-        }
-        init() {
-            this.thumbMin.addEventListener('mousedown', (e) => this.startDrag(e, 'min'));
-            this.thumbMax.addEventListener('mousedown', (e) => this.startDrag(e, 'max'));
-            this.thumbMin.addEventListener('touchstart', (e) => this.startDrag(e, 'min'), {passive: true});
-            this.thumbMax.addEventListener('touchstart', (e) => this.startDrag(e, 'max'), {passive: true});
-            
-            this._onMouseMove = (e) => this.handleMove(e);
-            this._onTouchMove = (e) => this.onTouchMove(e);
-            this._onMouseUp = () => this.stopDrag();
-            this._onTouchEnd = () => this.stopDrag();
-            this.track.addEventListener('click', (e) => this.onTrackClick(e));
-        }
-        startDrag(e, thumb) {
-            this.isDragging = true; this.activeThumb = thumb;
-            this.trackRect = this.track.getBoundingClientRect();
-            if (!e.touches) { e.preventDefault(); document.body.style.userSelect = 'none'; }
-            document.addEventListener('mousemove', this._onMouseMove, {passive: true});
-            document.addEventListener('mouseup', this._onMouseUp);
-            document.addEventListener('touchmove', this._onTouchMove, {passive: false});
-            document.addEventListener('touchend', this._onTouchEnd);
-        }
-        stopDrag() {
-            if (!this.isDragging) return;
-            this.isDragging = false; this.activeThumb = null; this.trackRect = null;
-            document.body.style.userSelect = '';
-            document.removeEventListener('mousemove', this._onMouseMove);
-            document.removeEventListener('mouseup', this._onMouseUp);
-            document.removeEventListener('touchmove', this._onTouchMove);
-            document.removeEventListener('touchend', this._onTouchEnd);
-            applyFilters();
-        }
-        getClientX(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
-        onTouchMove(e) { if (this.isDragging && this.activeThumb && this.trackRect) { e.preventDefault(); this.handleMove(e); } }
-        handleMove(e) {
-            if (!this.isDragging || !this.activeThumb || !this.trackRect) return;
-            const percent = Math.max(0, Math.min(1, (this.getClientX(e) - this.trackRect.left) / this.trackRect.width));
-            const value = Math.round(this.min + (this.max - this.min) * percent);
-            if (this.activeThumb === 'min') {
-                this.currentMin = Math.min(value, this.currentMax); this.minInput.value = this.currentMin;
-            } else {
-                this.currentMax = Math.max(value, this.currentMin); this.maxInput.value = this.currentMax;
-            }
-            this.throttledUpdate();
-        }
-        onTrackClick(e) {
-            if (this.isDragging) return;
-            const rect = this.track.getBoundingClientRect();
-            const percent = (e.clientX - rect.left) / rect.width;
-            const value = Math.round(this.min + (this.max - this.min) * percent);
-            const range = this.max - this.min;
-            const minP = range === 0 ? 0 : (this.currentMin - this.min) / range;
-            const maxP = range === 0 ? 1 : (this.currentMax - this.min) / range;
-            
-            if (Math.abs(percent - minP) < Math.abs(percent - maxP)) {
-                this.currentMin = Math.min(value, this.currentMax); this.minInput.value = this.currentMin;
-            } else {
-                this.currentMax = Math.max(value, this.currentMin); this.maxInput.value = this.currentMax;
-            }
-            this.updateSlider(); applyFilters();
-        }
-        updateSlider() {
-            const range = this.max - this.min;
-            const minP = range === 0 ? 0 : (this.currentMin - this.min) / range * 100;
-            const maxP = range === 0 ? 100 : (this.currentMax - this.min) / range * 100;
-            this.thumbMin.style.left = minP + '%'; this.thumbMax.style.left = maxP + '%';
-            this.fill.style.left = minP + '%'; this.fill.style.width = (maxP - minP) + '%';
-        }
-    }
-
-
     // ========== ДИНАМИЧЕСКИЙ РЕНДЕР И ФИЛЬТРАЦИЯ ==========
 
     function renderFilters() {
@@ -534,18 +425,43 @@ document.addEventListener('DOMContentLoaded', () => {
                   <div class="multiselect-dropdown hidden"></div></div>`;
             } else if (f.type === 'select') {
                 html += `<select class="f-select" id="sel-${f.key}"><option value="">Любой выбор</option></select>`;
-            } else if (f.type === 'range') {
-                html += `<div class="double-range" id="${f.key}-range-wrap"><div class="range-track" id="${f.key}-track"><div class="range-fill" id="${f.key}-fill"></div><div class="thumb" id="${f.key}-thumb-min" role="slider" tabindex="0"></div><div class="thumb" id="${f.key}-thumb-max" role="slider" tabindex="0"></div></div></div>
-                <div class="range-row"><input type="number" class="f-input" id="range-${f.key}-min" placeholder="От"><input type="number" class="f-input" id="range-${f.key}-max" placeholder="До"></div>`;
+            } else if (f.type === 'minmax') {
+                html += `
+                <div class="minmax-row">
+                    <select class="f-select minmax-min" id="sel-${f.key}-min"><option value="">От</option></select>
+                    <select class="f-select minmax-max" id="sel-${f.key}-max"><option value="">До</option></select>
+                </div>`;
             } else if (f.type === 'toggle') {
-                html += `<div class="toggle-row" id="tog-${f.key}"><button type="button" class="toggle-opt is-active" data-val="all">Все</button><button type="button" class="toggle-opt" data-val="left">Левый</button><button type="button" class="toggle-opt" data-val="right">Правый</button></div>`;
+                html += `<div class="toggle-row" id="tog-${f.key}">
+                  <button type="button" class="toggle-opt is-active" data-val="all">Все</button>`;
+                if (f.options) {
+                    f.options.forEach(opt => {
+                        html += `<button type="button" class="toggle-opt" data-val="${escapeHtml(opt.val)}">${escapeHtml(opt.label)}</button>`;
+                    });
+                }
+                html += `</div>`;
             }
             html += `</div><div class="f-sep"></div>`;
         });
+        
+        // Добавляем сортировку прямо в панель фильтров
+        html += `
+        <div class="filter-group sort-group">
+            <label class="filter-label">Сортировка</label>
+            <select class="f-select" id="sort-select">
+                <option value="default">По умолчанию</option>
+                <option value="price-asc">Сначала дешевле</option>
+                <option value="price-desc">Сначала дороже</option>
+                <option value="year-desc">Сначала новые</option>
+                <option value="year-asc">Сначала старые</option>
+                <option value="run-asc">Меньше пробег</option>
+                <option value="run-desc">Больше пробег</option>
+            </select>
+        </div>`;
+        
         container.innerHTML = html;
     }
 
-    // НОВАЯ ФУНКЦИЯ КАСКАДНОГО ОБНОВЛЕНИЯ
     function updateDependencies() {
         APP_CONFIG.filters.forEach(f => {
             if (!f.enabled || !f.dependsOn) return;
@@ -553,7 +469,6 @@ document.addEventListener('DOMContentLoaded', () => {
             let validCars = cars;
             let currentFilter = f;
             
-            // Поднимаемся по цепочке зависимостей (Например: Поколение -> Модель -> Марка)
             while (currentFilter && currentFilter.dependsOn) {
                 const parentKey = currentFilter.dependsOn;
                 const parentF = APP_CONFIG.filters.find(x => x.key === parentKey);
@@ -581,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const currentVal = el.value;
                     el.innerHTML = `<option value="">Любой выбор</option>` + uniqueVals.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
                     if (uniqueVals.includes(currentVal)) el.value = currentVal;
-                    else el.value = ''; // Сброс неактуального значения
+                    else el.value = '';
                 }
             } else if (f.type === 'multiselect') {
                 const ms = window.filterInstances.multiselects[f.key];
@@ -599,15 +514,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!hasFullCatalog) return;
         renderFilters();
         
-        // 1. Инициализируем только НЕЗАВИСИМЫЕ фильтры
+        // Обновляем ссылки на DOM-элементы, так как они были сгенерированы заново
+        FDOM.sort = document.getElementById('sort-select');
+        
+        const getUnique = key => [...new Set(cars.map(c => c[key]).filter(Boolean))].sort();
+        
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
-            const getUnique = key => [...new Set(cars.map(c => c[key]).filter(Boolean))].sort();
-            const uniqueVals = getUnique(f.key);
             
+            // Инициализация Select и Multiselect
             if (f.type === 'select') {
                 const el = document.getElementById(`sel-${f.key}`);
                 if (el) {
                     if (!f.dependsOn) {
+                        const uniqueVals = getUnique(f.key);
                         el.innerHTML = `<option value="">Любой выбор</option>` + uniqueVals.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
                     }
                     el.addEventListener('change', debounce(applyFilters, 400));
@@ -616,26 +535,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 const el = document.getElementById(`ms-${f.key}`);
                 if (el) {
                     const ms = new MultiSelect(el, 'Любой выбор');
-                    if (!f.dependsOn) ms.setOptions(uniqueVals);
+                    if (!f.dependsOn) ms.setOptions(getUnique(f.key));
                     window.filterInstances.multiselects[f.key] = ms;
                 }
-            } else if (f.type === 'range') {
-                const minInput = document.getElementById(`range-${f.key}-min`);
-                const maxInput = document.getElementById(`range-${f.key}-max`);
-                if (minInput && maxInput) {
-                    window.filterInstances.ranges[f.key] = new FastRangeSlider(f.key, `range-${f.key}-min`, `range-${f.key}-max`);
-                    minInput.addEventListener('input', debounce(() => {
-                        const s = window.filterInstances.ranges[f.key];
-                        s.currentMin = Math.max(s.min, Math.min(parseInt(minInput.value)||s.min, s.currentMax));
-                        s.updateSlider(); applyFilters();
-                    }, 400));
-                    maxInput.addEventListener('input', debounce(() => {
-                        const s = window.filterInstances.ranges[f.key];
-                        s.currentMax = Math.min(s.max, Math.max(parseInt(maxInput.value)||s.max, s.currentMin));
-                        s.updateSlider(); applyFilters();
-                    }, 400));
+            } 
+            
+            // Логика округления и генерации диапазонов (minmax)
+            else if (f.type === 'minmax') {
+                const values = cars.map(c => parseInt(c[f.key])).filter(v => !isNaN(v));
+                if (values.length) {
+                    let min = Math.min(...values);
+                    let max = Math.max(...values);
+                    
+                    if (f.step) {
+                        min = Math.floor(min / f.step) * f.step;
+                        max = Math.ceil(max / f.step) * f.step;
+                    }
+
+                    const minEl = document.getElementById(`sel-${f.key}-min`);
+                    const maxEl = document.getElementById(`sel-${f.key}-max`);
+                    
+                    let optsHtml = '';
+                    for (let v = min; v <= max; v += f.step) {
+                        const label = f.key === 'year' ? v : formatNum(v);
+                        optsHtml += `<option value="${v}">${label}</option>`;
+                    }
+                    
+                    if (minEl) {
+                        minEl.innerHTML += optsHtml;
+                        minEl.addEventListener('change', debounce(applyFilters, 400));
+                    }
+                    if (maxEl) {
+                        maxEl.innerHTML += optsHtml;
+                        maxEl.addEventListener('change', debounce(applyFilters, 400));
+                    }
                 }
-            } else if (f.type === 'toggle') {
+            } 
+            
+            // Делегирование событий Toggle
+            else if (f.type === 'toggle') {
                 const tog = document.getElementById(`tog-${f.key}`);
                 if (tog) {
                     tog.addEventListener('click', (e) => {
@@ -650,8 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        if(FDOM.search) FDOM.search.addEventListener('input', debounce(applyFilters, 400));
-        if(FDOM.sort) FDOM.sort.addEventListener('change', applyFilters);
+        if (FDOM.sort) FDOM.sort.addEventListener('change', applyFilters);
 
         document.getElementById('page-size')?.addEventListener('change', (e) => {
             pageSize = parseInt(e.target.value) || 32;
@@ -677,14 +614,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyFilters() {
         if (!hasFullCatalog) return;
         
-        // Сначала пересчитываем каскадные зависимости перед фильтрацией!
         updateDependencies();
-
-        const searchTerm = (FDOM.search?.value || '').toLowerCase();
-        const sortBy = FDOM.sort?.value;
+        const sortBy = FDOM.sort?.value || 'default';
 
         filteredCars = cars.filter(car => {
-            if (searchTerm && !(car.mark_id || '').toLowerCase().includes(searchTerm)) return false;
 
             for (const f of APP_CONFIG.filters) {
                 if (!f.enabled) continue;
@@ -696,20 +629,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (f.type === 'select') {
                     const sel = document.getElementById(`sel-${f.key}`)?.value;
                     if (sel && String(val) !== sel) return false;
-                } else if (f.type === 'range') {
-                    const min = parseInt(document.getElementById(`range-${f.key}-min`)?.value);
-                    const max = parseInt(document.getElementById(`range-${f.key}-max`)?.value);
+                } else if (f.type === 'minmax') {
+                    const min = parseInt(document.getElementById(`sel-${f.key}-min`)?.value);
+                    const max = parseInt(document.getElementById(`sel-${f.key}-max`)?.value);
                     const numVal = parseInt(val);
                     if (!isNaN(min) && numVal < min) return false;
                     if (!isNaN(max) && numVal > max) return false;
                 } else if (f.type === 'toggle') {
                     const active = document.querySelector(`#tog-${f.key} .is-active`)?.dataset.val || 'all';
                     if (active !== 'all') {
-                        const wheel = String(val).toLowerCase();
-                        const isLeft = wheel.includes('лев') || wheel.includes('left');
-                        const isRight = wheel.includes('прав') || wheel.includes('right');
-                        if (active === 'left' && !isLeft) return false;
-                        if (active === 'right' && !isRight) return false;
+                        if (String(val).toLowerCase() !== String(active).toLowerCase()) return false;
                     }
                 }
             }
@@ -718,6 +647,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (sortBy === 'price-asc') filteredCars.sort((a, b) => a.price - b.price);
         if (sortBy === 'price-desc') filteredCars.sort((a, b) => b.price - a.price);
+        if (sortBy === 'year-desc') filteredCars.sort((a, b) => b.year - a.year);
+        if (sortBy === 'year-asc') filteredCars.sort((a, b) => a.year - b.year);
+        if (sortBy === 'run-asc') filteredCars.sort((a, b) => a.run - b.run);
+        if (sortBy === 'run-desc') filteredCars.sort((a, b) => b.run - a.run);
 
         window.urlManager.syncFiltersToUrl();
         
@@ -796,7 +729,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('mob-overlay')?.addEventListener('click', closeDrawer);
 
     document.getElementById('clear-filters')?.addEventListener('click', () => {
-        if(FDOM.search) FDOM.search.value = '';
         if(FDOM.sort) FDOM.sort.value = 'default';
         
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
@@ -807,13 +739,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (f.type === 'select') {
                 const el = document.getElementById(`sel-${f.key}`);
                 if (el) el.value = '';
-            } else if (f.type === 'range') {
-                const slider = window.filterInstances.ranges[f.key];
-                if (slider) {
-                    slider.currentMin = slider.min; slider.currentMax = slider.max;
-                    slider.minInput.value = ''; slider.maxInput.value = ''; 
-                    slider.updateSlider();
-                }
+            } else if (f.type === 'minmax') {
+                const minEl = document.getElementById(`sel-${f.key}-min`);
+                const maxEl = document.getElementById(`sel-${f.key}-max`);
+                if (minEl) minEl.value = '';
+                if (maxEl) maxEl.value = '';
             } else if (f.type === 'toggle') {
                 document.querySelectorAll(`#tog-${f.key} .toggle-opt`).forEach(b => {
                     b.classList.toggle('is-active', b.dataset.val === 'all');
