@@ -1,4 +1,4 @@
-<div class="make-catalog" data-filter-layout="vertical" data-make-catalog="full">
+<div class="make-catalog" data-filter-layout="horizontal" data-make-catalog="full">
   <div class="catalog-wrap">
     
     <aside class="sidebar">
@@ -38,9 +38,24 @@
       <div class="car-grid" id="cards-grid"></div>
 
       <div class="pagination-container" id="pagination-container" style="display: none;">
+        <div class="pagination-info">
+          <div class="results-count" id="results-count">Показано: 0 автомобилей</div>
+          <div class="page-size-selector">
+            <label for="page-size">Показывать по:</label>
+            <select id="page-size">
+              <option value="16">16</option>
+              <option value="32" selected>32</option>
+              <option value="64">64</option>
+              <option value="100">100</option>
+            </select>
+          </div>
         </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
     </div>
   </div>
+
+  <div id="seo-links-container" style="opacity: 0; height: 1px; width: 1px; overflow: hidden; position: absolute;"></div>
 
   <div class="mob-overlay" id="mob-overlay"></div>
   <div class="mob-drawer" id="mob-drawer">

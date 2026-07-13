@@ -5,22 +5,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const APP_CONFIG = {
         feedUrls: [
             'https://dhost.makeagency.ru/playback/test-catalog-feed.json',
-            'http://s3.hommenest.ru/digital/backup/test-catalog-feed.json' // Наш новый тестовый фид
+            'http://s3.hommenest.ru/digital/backup/test-catalog-feed.json'
         ],
         cacheName: 'make_catalog_cache',
         cacheTTL: 25 * 60 * 1000, 
         
+        // ВАЖНО: dependsOn используется только для строгой иерархии (Марка -> Модель -> Поколение)
         filters: [
             { key: 'salon',            type: 'multiselect', label: 'Автосалон',       enabled: true },
             { key: 'price',            type: 'range',       label: 'Стоимость, ₽',    enabled: true },
             { key: 'run',              type: 'range',       label: 'Пробег, км',      enabled: true },
             { key: 'year',             type: 'range',       label: 'Год выпуска',     enabled: true },
+            
+            // --- СТРОГАЯ ИЕРАРХИЯ ---
             { key: 'original_mark_id', type: 'multiselect', label: 'Марка',           enabled: true },
-            { key: 'gearbox',          type: 'select',      label: 'Коробка передач', enabled: true },
-            { key: 'body_type',        type: 'select',      label: 'Тип кузова',      enabled: true },
-            { key: 'drive',            type: 'select',      label: 'Тип привода',     enabled: true },
-            { key: 'engine_type',      type: 'select',      label: 'Двигатель',       enabled: true },
-            { key: 'color',            type: 'select',      label: 'Цвет кузова',     enabled: true },
+            { key: 'model',            type: 'select',      label: 'Модель',          enabled: true, dependsOn: 'original_mark_id' },
+            { key: 'generation',       type: 'select',      label: 'Поколение',       enabled: false, dependsOn: 'model' },
+            // ------------------------
+
+            { key: 'body_type',        type: 'multiselect', label: 'Тип кузова',      enabled: true }, 
+            { key: 'gearbox',          type: 'multiselect', label: 'Коробка передач', enabled: true },
+            { key: 'engine_type',      type: 'multiselect', label: 'Двигатель',       enabled: true },
+            { key: 'engine_volume',    type: 'range',       label: 'Объем, л',        enabled: true },
+            { key: 'engine_power',     type: 'range',       label: 'Мощность, л.с.',  enabled: false },
+            { key: 'drive',            type: 'toggle',      label: 'Тип привода',     enabled: true },
+            { key: 'color',            type: 'multiselect', label: 'Цвет кузова',     enabled: true },
+            { key: 'pts',              type: 'toggle',      label: 'ПТС',             enabled: true },
+            { key: 'owners_number',    type: 'range',       label: 'Владельцев',      enabled: true },
             { key: 'wheel',            type: 'toggle',      label: 'Руль',            enabled: true }
         ]
     };
@@ -34,27 +45,32 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
     };
 
-    // ========== DOM КЭШ ==========
+    // ========== DOM КЭШ И ПЕРЕМЕННЫЕ ==========
     const FDOM = {
         cardsContainer: document.getElementById('cards-grid'),
         randomGrid: document.querySelector('[data-make-random-grid]'),
         search: document.getElementById('search'),
-        sort: document.getElementById('sort-select')
+        sort: document.getElementById('sort-select'),
+        pagination: document.getElementById('pagination-container')
     };
 
     const hasFullCatalog = !!FDOM.cardsContainer;
     const hasRandomCatalog = !!FDOM.randomGrid;
+    const randomCatalogLimit = hasRandomCatalog ? Math.max(1, parseInt(FDOM.randomGrid.getAttribute('data-limit') || '9', 10)) : 9;
 
     let cars = [];
     let filteredCars = [];
     let lastLeadCar = null;
     window.filterInstances = { multiselects: {}, ranges: {} };
+    
+    let currentPage = 1;
+    let pageSize = 32;
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"><rect width="100%" height="100%" fill="#e2e8f0"/><text x="50%" y="50%" font-family="Arial" font-size="16" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Нет фото</text></svg>'
     );
 
-    // ========== УТИЛИТЫ ==========
+    // ========== УТИЛИТЫ И SEO ==========
     function escapeHtml(value) {
         if (value === null || value === undefined) return '';
         return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -62,20 +78,41 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatNum(n) { return Number(n).toLocaleString('ru-RU'); }
     function debounce(func, wait) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func(...args), wait); }; }
 
-    // Компенсация скролла
     let scrollbarWidth = null;
     function getScrollbarWidth() {
         if (scrollbarWidth !== null) return scrollbarWidth;
         scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
         return scrollbarWidth;
     }
-    function lockBodyScroll() {
-        document.body.style.paddingRight = getScrollbarWidth() + 'px';
-        document.body.style.overflow = 'hidden';
+    function lockBodyScroll() { document.body.style.paddingRight = getScrollbarWidth() + 'px'; document.body.style.overflow = 'hidden'; }
+    function unlockBodyScroll() { document.body.style.paddingRight = ''; document.body.style.overflow = ''; }
+
+    function generateSEOLinks() {
+        const seoContainer = document.getElementById('seo-links-container');
+        if (!seoContainer || !cars.length) return;
+        const baseUrl = window.location.href.split('?')[0];
+        const html = cars.map(car => `<a href="${baseUrl}?car=${car.id}">${escapeHtml(car.mark_id)} ${car.year}</a>`).join(' | ');
+        seoContainer.innerHTML = html;
     }
-    function unlockBodyScroll() {
-        document.body.style.paddingRight = '';
-        document.body.style.overflow = '';
+
+    function renderSkeletons(count = 9) {
+        const target = FDOM.cardsContainer || FDOM.randomGrid;
+        if (!target) return;
+        let html = '';
+        for (let i = 0; i < count; i++) {
+            html += `
+            <div class="skeleton-card">
+                <div class="skeleton-image"></div>
+                <div class="skeleton-content">
+                    <div class="skeleton-line title"></div>
+                    <div class="skeleton-line"></div>
+                    <div class="skeleton-line" style="width: 50%"></div>
+                    <div class="skeleton-line price"></div>
+                    <div class="skeleton-btn"></div>
+                </div>
+            </div>`;
+        }
+        target.innerHTML = html;
     }
 
     // ========== ИНДЕКСИРОВАННАЯ БД ==========
@@ -160,7 +197,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } else if (f.type === 'select') {
                     const el = document.getElementById(`sel-${f.key}`);
-                    if (el && url.searchParams.has(f.key)) el.value = url.searchParams.get(f.key);
+                    if (el && url.searchParams.has(f.key)) {
+                        const val = url.searchParams.get(f.key);
+                        // Вставляем опцию динамически, чтобы не потерять ее до обсчета зависимостей
+                        if (!el.querySelector(`option[value="${val}"]`)) {
+                            el.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`);
+                        }
+                        el.value = val;
+                    }
                 } else if (f.type === 'range') {
                     const minEl = document.getElementById(`range-${f.key}-min`);
                     const maxEl = document.getElementById(`range-${f.key}-max`);
@@ -194,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.urlManager = new URLManager();
 
-    // ========== МОДАЛЬНОЕ ОКНО (Обновленное для Split-Screen) ==========
+    // ========== МОДАЛЬНОЕ ОКНО ==========
     class CarDetailModal {
         constructor() {
             this.isOpen = false;
@@ -225,7 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (e.key === 'ArrowLeft') this.prevImage();
             });
 
-            // Закрытие по клику на оверлей вне модалки
             this.overlay.addEventListener('click', (e) => {
                 if (e.target === this.overlay) this.close();
             });
@@ -236,7 +279,6 @@ document.addEventListener('DOMContentLoaded', () => {
             window.urlManager.updateUrl(car.id);
             this.renderGallery(car);
             
-            // Рендер характеристик (Pills)
             const pillsContainer = this.overlay.querySelector('#modalPills');
             pillsContainer.innerHTML = '';
             if (car.year) pillsContainer.innerHTML += `<span class="ctag">${car.year} год</span>`;
@@ -244,7 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (car.gearbox) pillsContainer.innerHTML += `<span class="ctag">${car.gearbox}</span>`;
             if (car.engine_volume) pillsContainer.innerHTML += `<span class="ctag">${car.engine_volume} л</span>`;
 
-            // Подробные характеристики (Grid)
             const specsContainer = this.overlay.querySelector('#modalSpecs');
             const specs = [
                 { label: 'Кузов', value: car.body_type || 'Не указан' },
@@ -267,16 +308,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 descBlock.style.display = 'block';
             } else descBlock.style.display = 'none';
 
-            // Настройка кнопок захвата лида
             const applyBtns = this.overlay.querySelectorAll('.modal-apply-btn, .modal-calc-btn');
-            applyBtns.forEach(btn => {
-                btn.dataset.carTitle = car.mark_id;
-            });
+            applyBtns.forEach(btn => btn.dataset.carTitle = car.mark_id);
 
             lockBodyScroll();
             this.overlay.style.display = 'flex';
             this.overlay.classList.remove('hidden');
-            // Сбрасываем скролл правой колонки наверх
+            
             const rightCol = this.overlay.querySelector('.modal-right');
             if (rightCol) rightCol.scrollTop = 0;
             
@@ -507,25 +545,78 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = html;
     }
 
+    // НОВАЯ ФУНКЦИЯ КАСКАДНОГО ОБНОВЛЕНИЯ
+    function updateDependencies() {
+        APP_CONFIG.filters.forEach(f => {
+            if (!f.enabled || !f.dependsOn) return;
+            
+            let validCars = cars;
+            let currentFilter = f;
+            
+            // Поднимаемся по цепочке зависимостей (Например: Поколение -> Модель -> Марка)
+            while (currentFilter && currentFilter.dependsOn) {
+                const parentKey = currentFilter.dependsOn;
+                const parentF = APP_CONFIG.filters.find(x => x.key === parentKey);
+                if (!parentF) break;
+                
+                let parentVals = [];
+                if (parentF.type === 'multiselect') {
+                    parentVals = window.filterInstances.multiselects[parentKey]?.getSelectedValues() || [];
+                } else if (parentF.type === 'select') {
+                    const v = document.getElementById(`sel-${parentKey}`)?.value;
+                    if (v) parentVals.push(v);
+                }
+                
+                if (parentVals.length > 0) {
+                    validCars = validCars.filter(c => parentVals.includes(String(c[parentKey])));
+                }
+                currentFilter = parentF; 
+            }
+
+            const uniqueVals = [...new Set(validCars.map(c => c[f.key]).filter(Boolean))].sort();
+
+            if (f.type === 'select') {
+                const el = document.getElementById(`sel-${f.key}`);
+                if (el) {
+                    const currentVal = el.value;
+                    el.innerHTML = `<option value="">Любой выбор</option>` + uniqueVals.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+                    if (uniqueVals.includes(currentVal)) el.value = currentVal;
+                    else el.value = ''; // Сброс неактуального значения
+                }
+            } else if (f.type === 'multiselect') {
+                const ms = window.filterInstances.multiselects[f.key];
+                if (ms) {
+                    ms.setOptions(uniqueVals);
+                    ms.selectedValues = new Set([...ms.selectedValues].filter(v => uniqueVals.includes(v)));
+                    ms.renderDropdown();
+                    ms.renderSelected();
+                }
+            }
+        });
+    }
+
     function initFilters() {
         if (!hasFullCatalog) return;
         renderFilters();
         
-        const getUnique = key => [...new Set(cars.map(c => c[key]).filter(Boolean))].sort();
-        
+        // 1. Инициализируем только НЕЗАВИСИМЫЕ фильтры
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
+            const getUnique = key => [...new Set(cars.map(c => c[key]).filter(Boolean))].sort();
+            const uniqueVals = getUnique(f.key);
+            
             if (f.type === 'select') {
                 const el = document.getElementById(`sel-${f.key}`);
                 if (el) {
-                    const options = getUnique(f.key).map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`);
-                    el.innerHTML = `<option value="">Любой выбор</option>` + options.join('');
+                    if (!f.dependsOn) {
+                        el.innerHTML = `<option value="">Любой выбор</option>` + uniqueVals.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+                    }
                     el.addEventListener('change', debounce(applyFilters, 400));
                 }
             } else if (f.type === 'multiselect') {
                 const el = document.getElementById(`ms-${f.key}`);
                 if (el) {
                     const ms = new MultiSelect(el, 'Любой выбор');
-                    ms.setOptions(getUnique(f.key));
+                    if (!f.dependsOn) ms.setOptions(uniqueVals);
                     window.filterInstances.multiselects[f.key] = ms;
                 }
             } else if (f.type === 'range') {
@@ -562,6 +653,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if(FDOM.search) FDOM.search.addEventListener('input', debounce(applyFilters, 400));
         if(FDOM.sort) FDOM.sort.addEventListener('change', applyFilters);
 
+        document.getElementById('page-size')?.addEventListener('change', (e) => {
+            pageSize = parseInt(e.target.value) || 32;
+            currentPage = 1;
+            renderPagination();
+            renderCardsPage();
+        });
+
+        document.getElementById('pagination')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.pagination-btn');
+            if (!btn || btn.disabled || btn.classList.contains('active')) return;
+            currentPage = parseInt(btn.dataset.page);
+            renderPagination();
+            renderCardsPage();
+            document.querySelector('.toolbar')?.scrollIntoView({ behavior: 'smooth' });
+        });
+
         window.urlManager.loadFiltersFromUrl();
         handleMobileDrawer(); 
         applyFilters();
@@ -569,6 +676,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function applyFilters() {
         if (!hasFullCatalog) return;
+        
+        // Сначала пересчитываем каскадные зависимости перед фильтрацией!
+        updateDependencies();
+
         const searchTerm = (FDOM.search?.value || '').toLowerCase();
         const sortBy = FDOM.sort?.value;
 
@@ -609,7 +720,47 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sortBy === 'price-desc') filteredCars.sort((a, b) => b.price - a.price);
 
         window.urlManager.syncFiltersToUrl();
-        renderCards(filteredCars.slice(0, 32), FDOM.cardsContainer);
+        
+        currentPage = 1;
+        renderPagination();
+        renderCardsPage();
+    }
+
+    // ========== ЛОГИКА ПАГИНАЦИИ ==========
+    function renderCardsPage() {
+        const start = (currentPage - 1) * pageSize;
+        const paginatedCars = filteredCars.slice(start, start + pageSize);
+        renderCards(paginatedCars, FDOM.cardsContainer);
+        
+        const countEl = document.getElementById('results-count');
+        if (countEl) countEl.textContent = `Показано: ${paginatedCars.length} из ${filteredCars.length} автомобилей`;
+    }
+
+    function renderPagination() {
+        if (!FDOM.pagination) return;
+        const pagWrapper = document.getElementById('pagination');
+        const totalPages = Math.ceil(filteredCars.length / pageSize);
+        
+        if (totalPages <= 1) {
+            FDOM.pagination.style.display = 'none';
+            return;
+        }
+        
+        FDOM.pagination.style.display = 'flex';
+        let html = '';
+        
+        html += `<button class="pagination-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>Назад</button>`;
+        
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+            } else if (i === currentPage - 3 || i === currentPage + 3) {
+                html += `<span class="pagination-ellipsis">...</span>`;
+            }
+        }
+        
+        html += `<button class="pagination-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>Вперед</button>`;
+        pagWrapper.innerHTML = html;
     }
 
     // ========== МОБИЛЬНАЯ АДАПТАЦИЯ ==========
@@ -624,7 +775,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isMobile && !drawerBody.contains(filtersContainer)) {
             drawerBody.appendChild(filtersContainer);
         } else if (!isMobile && !sidebar.contains(filtersContainer)) {
-            // Возвращаем фильтры в сайдбар перед кнопками
             const sidebarFoot = sidebar.querySelector('.sidebar-foot');
             if (sidebarFoot) sidebar.insertBefore(filtersContainer, sidebarFoot);
         }
@@ -645,7 +795,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('mob-close')?.addEventListener('click', closeDrawer);
     document.getElementById('mob-overlay')?.addEventListener('click', closeDrawer);
 
-    // Сброс фильтров
     document.getElementById('clear-filters')?.addEventListener('click', () => {
         if(FDOM.search) FDOM.search.value = '';
         if(FDOM.sort) FDOM.sort.value = 'default';
@@ -675,22 +824,12 @@ document.addEventListener('DOMContentLoaded', () => {
         closeDrawer();
     });
 
-    // ========== ЛОГИКА СОКРАЩЕННОГО (РАНДОМНОГО) КАТАЛОГА ==========
-    // Эта функция вызывается только для виджета на главной странице (catalog-reduced.html)
+    // ========== ЛОГИКА СОКРАЩЕННОГО КАТАЛОГА ==========
     function initRandomCatalog() {
         if (!hasRandomCatalog) return;
-        
-        // 1. Берем весь массив машин и перемешиваем его (Math.random)
         const shuffled = cars.sort(() => 0.5 - Math.random());
-        
-        // 2. Отрезаем нужное количество машин (по умолчанию 9)
         const randomCars = shuffled.slice(0, randomCatalogLimit);
-        
-        // 3. Рисуем их в сетку
         renderCards(randomCars, FDOM.randomGrid);
-        
-        // Примечание: Фильтры для этого виджета не инициализируются намеренно,
-        // так как его задача - просто показать N случайных машин для завлечения клиента.
     }
 
     // ========== РЕНДЕР КАРТОЧЕК ==========
@@ -740,7 +879,6 @@ document.addEventListener('DOMContentLoaded', () => {
         container.querySelectorAll('img.lazy-image').forEach(img => observer.observe(img));
     }
 
-    // Делегирование кликов (открытие модалки и карусель на карточках)
     function bindGridEvents(container) {
         if (!container) return;
         container.addEventListener('click', (e) => {
@@ -778,7 +916,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ========== ЗАГРУЗКА И ПАРСИНГ ==========
     async function loadCarsData() {
-        if (FDOM.cardsContainer) FDOM.cardsContainer.innerHTML = '<div class="loader">Загрузка...</div>';
+        renderSkeletons(12);
         
         let jsonData = await getCachedFeed();
         
@@ -800,6 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: id,
                 mark_id: `${data.mark || ''} ${data.model || ''}`.trim(),
                 original_mark_id: data.mark || '',
+                model: data.model || '',
                 year: data.year,
                 price: parseInt(data.price) || 0,
                 run: parseInt(data.run) || 0,
@@ -808,16 +947,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 color: data.color,
                 body_type: data.body_type,
                 engine_type: data.engine_type,
-                engine_volume: data.engine_volume,
-                owners_number: data.owners_number || data.owners,
-                pts: data.pts,
-                wheel: data.wheel,
+                engine_volume: data.engine_volume || '',
+                engine_power: parseInt(data.engine_power) || 0,
+                owners_number: data.owners_number || data.owners || '',
+                pts: data.pts || '',
+                wheel: data.wheel || '',
+                generation: data.generation || '',
                 images: data.images || [],
                 description: data.description,
                 salon: data.salon
             }));
             
-            // Распределение логики в зависимости от типа виджета на странице
+            generateSEOLinks();
+            
             if (hasFullCatalog) {
                 initFilters();
             } else if (hasRandomCatalog) {
@@ -825,7 +967,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         } else {
-            if(FDOM.cardsContainer) FDOM.cardsContainer.innerHTML = '<div class="no-results">Ошибка загрузки данных</div>';
+            const target = FDOM.cardsContainer || FDOM.randomGrid;
+            if(target) target.innerHTML = '<div class="no-results">Ошибка загрузки данных</div>';
         }
     }
 
@@ -854,6 +997,29 @@ document.addEventListener('DOMContentLoaded', () => {
             scheduleFillTildaFields(getPopupHook(trigger));
         }
     });
+
+    if (window.__MAKE_DEBUG_UTILS__) {
+        const D = window.__MAKE_DEBUG_UTILS__;
+        loadCarsData = D.debugWrap(loadCarsData, 'loadCarsData');
+        applyFilters = D.debugWrap(applyFilters, 'applyFilters');
+        
+        D.debugWrapPrototype(URLManager.prototype, 'URLManager');
+        D.debugWrapPrototype(CarDetailModal.prototype, 'CarDetailModal', ['prevImage', 'nextImage']);
+
+        window.makeCatalogDebug = {
+            dump: function(label = 'manual-dump') {
+                D.debugLog('SNAPSHOT ' + label, { carsCount: cars.length, filteredCount: filteredCars.length, urlState: window.location.search });
+                if (cars.length) D.debugTable('dump.cars', cars);
+                return { cars, filteredCars, lastLeadCar, currentPage, pageSize };
+            },
+            clearCache: async () => {
+                const db = await openCacheDB();
+                db.transaction('feed', 'readwrite').objectStore('feed').delete('current');
+                D.debugLog('CACHE', 'Кэш IndexedDB принудительно очищен');
+            }
+        };
+        D.debugInfo('INIT', 'Дебаггер подключен. Введите makeCatalogDebug.dump() в консоль.');
+    }
     
     // Запуск приложения
     loadCarsData();
