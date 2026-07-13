@@ -21,9 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'gearbox',          type: 'select', label: 'Коробка передач', enabled: true },
             { key: 'engine_type',      type: 'select', label: 'Двигатель',       enabled: true },
             { key: 'engine_volume',    type: 'minmax', label: 'Объем, л',        enabled: true, step: 0.5},
-            { key: 'drive',            type: 'select', label: 'Тип привода',     enabled: true },
+            { key: 'drive',            type: 'toggle', label: 'Тип привода',     enabled: true },
             { key: 'color',            type: 'select', label: 'Цвет кузова',     enabled: true },
-            { key: 'pts',              type: 'select', label: 'ПТС',             enabled: true },
+            { key: 'pts',              type: 'toggle', label: 'ПТС',             enabled: true },
             { key: 'owners_number',    type: 'select', label: 'Владельцев',      enabled: true },
             { key: 'wheel',            type: 'toggle', label: 'Руль',            enabled: true },
             { key: 'salon',            type: 'select', label: 'Автосалон',       enabled: false }
@@ -54,11 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let filteredCars = [];
     let lastLeadCar = null;
     
-    // ИСПРАВЛЕНИЕ: Инкапсулируем глобальные переменные
     const filterInstances = { multiselects: {} };
     
+    // ИСПРАВЛЕНИЕ: Количество машин по умолчанию, чтобы было видно пагинацию
     let currentPage = 1;
-    let pageSize = 32;
+    let pageSize = parseInt(document.getElementById('page-size')?.value) || 16; 
     let lazyObserver = null;
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
@@ -258,15 +258,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         handleKeyDown(e) {
             if (!this.isOpen) return;
-            
-            if (e.key === 'Escape') {
-                this.close();
-                return;
-            }
+            if (e.key === 'Escape') { this.close(); return; }
             if (e.key === 'ArrowRight') this.nextImage();
             if (e.key === 'ArrowLeft') this.prevImage();
 
-            // ИСПРАВЛЕНИЕ: Реализация Focus Trap
             if (e.key === 'Tab') {
                 const focusableElements = this.overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
                 if (!focusableElements.length) return;
@@ -274,12 +269,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const firstElement = focusableElements[0];
                 const lastElement = focusableElements[focusableElements.length - 1];
 
-                if (e.shiftKey) { // Shift + Tab
+                if (e.shiftKey) { 
                     if (document.activeElement === firstElement) {
                         e.preventDefault();
                         lastElement.focus();
                     }
-                } else { // Tab
+                } else { 
                     if (document.activeElement === lastElement) {
                         e.preventDefault();
                         firstElement.focus();
@@ -291,12 +286,11 @@ document.addEventListener('DOMContentLoaded', () => {
         open(car) {
             this.currentCar = car;
             this.isOpen = true;
-            this.previousFocus = document.activeElement; // Сохраняем элемент, с которого открыли модалку
+            this.previousFocus = document.activeElement; 
             
             urlManager.updateUrl(car.id);
             this.renderGallery(car);
             
-            // ИСПРАВЛЕНИЕ: Строгое экранирование (XSS) всех динамических значений
             const pillsContainer = this.overlay.querySelector('#modalPills');
             pillsContainer.innerHTML = '';
             if (car.year) pillsContainer.innerHTML += `<span class="ctag">${escapeHtml(car.year)} год</span>`;
@@ -336,12 +330,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const rightCol = this.overlay.querySelector('.modal-right');
             if (rightCol) rightCol.scrollTop = 0;
             
-            // Включаем Focus Trap и ловим клавиши
             document.addEventListener('keydown', this.handleKeyDown);
             
             setTimeout(() => {
                 this.overlay.classList.add('visible');
-                // Фокус на кнопку закрытия по умолчанию (для клавиатурной доступности)
                 const closeBtn = this.overlay.querySelector('.modal-close');
                 if (closeBtn) closeBtn.focus();
             }, 10);
@@ -358,7 +350,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.overlay.classList.add('hidden');
                 this.overlay.style.display = 'none';
                 unlockBodyScroll();
-                // Возвращаем фокус на место, откуда открыли модалку
                 if (this.previousFocus) this.previousFocus.focus();
             }, 300);
         }
@@ -380,7 +371,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const thumb = document.createElement('button');
                 thumb.className = `modal-thumb ${idx === 0 ? 'is-active' : ''}`;
-                // Безопасная вставка src
                 thumb.innerHTML = `<img src="${escapeHtml(src)}" alt="">`;
                 thumb.addEventListener('click', () => {
                     this.track.scrollTo({ left: this.track.clientWidth * idx, behavior: 'smooth' });
@@ -394,7 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const carDetailModal = new CarDetailModal();
 
     // ========== КОМПОНЕНТЫ ФИЛЬТРОВ ==========
-    
     class MultiSelect {
         constructor(container, placeholder) {
             this.container = container;
@@ -502,30 +491,79 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = html;
     }
 
+    // ИСПРАВЛЕНИЕ: Интеллектуальная блокировка зависимых полей (Каскадность + UX)
     function updateDependencies() {
         APP_CONFIG.filters.forEach(f => {
             if (!f.enabled || !f.dependsOn) return;
             
-            let validCars = cars;
-            let currentFilter = f;
+            const parentKey = f.dependsOn;
+            let parentVals = [];
+            const parentF = APP_CONFIG.filters.find(x => x.key === parentKey);
             
-            while (currentFilter && currentFilter.dependsOn) {
-                const parentKey = currentFilter.dependsOn;
-                const parentF = APP_CONFIG.filters.find(x => x.key === parentKey);
-                if (!parentF) break;
-                
-                let parentVals = [];
+            // Получаем актуальные значения родителя
+            if (parentF) {
                 if (parentF.type === 'multiselect') {
                     parentVals = filterInstances.multiselects[parentKey]?.getSelectedValues() || [];
                 } else if (parentF.type === 'select') {
                     const v = document.getElementById(`sel-${parentKey}`)?.value;
                     if (v) parentVals.push(v);
                 }
-                
-                if (parentVals.length > 0) {
-                    validCars = validCars.filter(c => parentVals.includes(String(c[parentKey])));
+            }
+
+            const isParentSelected = parentVals.length > 0;
+
+            // Блокируем или Разблокируем дочерний элемент (UX)
+            if (f.type === 'select') {
+                const el = document.getElementById(`sel-${f.key}`);
+                if (el) el.disabled = !isParentSelected;
+            } else if (f.type === 'multiselect') {
+                const msContainer = document.getElementById(`ms-${f.key}`);
+                if (msContainer) {
+                    isParentSelected ? msContainer.classList.remove('is-disabled') : msContainer.classList.add('is-disabled');
                 }
-                currentFilter = parentF; 
+            }
+
+            // Если родитель не выбран - очищаем дочерний элемент и прерываем обработку
+            if (!isParentSelected) {
+                if (f.type === 'select') {
+                    const el = document.getElementById(`sel-${f.key}`);
+                    if (el) {
+                        el.innerHTML = `<option value="">Любой выбор</option>`;
+                        el.value = '';
+                    }
+                } else if (f.type === 'multiselect') {
+                    const ms = filterInstances.multiselects[f.key];
+                    if (ms) {
+                        ms.setOptions([]);
+                        ms.selectedValues.clear();
+                        ms.renderDropdown();
+                        ms.renderSelected();
+                    }
+                }
+                return; // Прерываемся, чтобы не строить список из всех машин
+            }
+            
+            // Если родитель выбран - высчитываем доступные дочерние опции
+            let validCars = cars;
+            let currentFilter = f;
+            
+            while (currentFilter && currentFilter.dependsOn) {
+                const pKey = currentFilter.dependsOn;
+                const pF = APP_CONFIG.filters.find(x => x.key === pKey);
+                if (!pF) break;
+                
+                let pVals = [];
+                if (pF.type === 'multiselect') {
+                    pVals = filterInstances.multiselects[pKey]?.getSelectedValues() || [];
+                } else if (pF.type === 'select') {
+                    const v = document.getElementById(`sel-${pKey}`)?.value;
+                    if (v) pVals.push(v);
+                }
+                
+                if (pVals.length > 0) {
+                    validCars = validCars.filter(c => pVals.includes(String(c[pKey])));
+                }
+                currentFilter = pF; 
             }
 
             const uniqueVals = [...new Set(validCars.map(c => c[f.key]).filter(Boolean))].sort();
@@ -612,7 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sortSelect) sortSelect.addEventListener('change', applyFilters);
 
         document.getElementById('page-size')?.addEventListener('change', (e) => {
-            pageSize = parseInt(e.target.value) || 32;
+            pageSize = parseInt(e.target.value) || 16;
             currentPage = 1;
             renderPagination();
             renderCardsPage();
@@ -632,14 +670,12 @@ document.addEventListener('DOMContentLoaded', () => {
         applyFilters();
     }
 
-    // ИСПРАВЛЕНИЕ: Кэширование DOM перед циклом (оптимизация производительности)
     function applyFilters() {
         if (!hasFullCatalog) return;
         
         updateDependencies();
         const sortBy = document.getElementById('sort-select')?.value || 'default';
 
-        // 1. Считываем значения из DOM ровно один раз
         const activeFiltersData = [];
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
             let val = null;
@@ -658,7 +694,6 @@ document.addEventListener('DOMContentLoaded', () => {
             activeFiltersData.push({ config: f, value: val });
         });
 
-        // 2. Выполняем фильтрацию только на основе полученных значений из памяти
         filteredCars = cars.filter(car => {
             for (const { config: f, value: val } of activeFiltersData) {
                 const carVal = car[f.key];
@@ -710,11 +745,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalPages = Math.ceil(filteredCars.length / pageSize);
         
         if (totalPages <= 1) {
-            FDOM.pagination.style.display = 'none';
+            FDOM.pagination.style.display = 'none'; // Скрывает блок, если страниц мало
             return;
         }
         
-        FDOM.pagination.style.display = 'flex';
+        FDOM.pagination.style.display = 'flex'; // Показывает, если нужно
         let html = '';
         
         html += `<button class="pagination-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>Назад</button>`;
@@ -786,7 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
-        applyFilters();
+        applyFilters(); // Каскадная очистка сработает внутри applyFilters
         closeDrawer();
     });
 
@@ -946,13 +981,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========== ИНТЕГРАЦИЯ С TILDA ==========
     function getPopupHook(trigger) { return trigger.getAttribute('href') || trigger.dataset.popupTarget || ''; }
     
-    // ИСПРАВЛЕНИЕ: Интеллектуальный MutationObserver вместо ненадежных таймаутов
     let tildaObserver = null;
     
     function scheduleFillTildaFields(hook) {
         if (!lastLeadCar?.title) return;
 
-        // Попытка заполнить поля сразу (если форма уже загружена)
         const selectors = TILDA_CONFIG.getSelectors(TILDA_CONFIG.modelFieldName).join(',');
         const tryFill = () => {
             const fields = document.querySelectorAll(selectors);
@@ -970,7 +1003,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (tryFill()) return;
 
-        // Если форма еще не отрендерена - создаем наблюдателя
         if (tildaObserver) tildaObserver.disconnect();
         
         tildaObserver = new MutationObserver((mutations, obs) => {
@@ -984,10 +1016,9 @@ document.addEventListener('DOMContentLoaded', () => {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ['class', 'style'] // Отлавливаем смену видимости попапов
+            attributeFilter: ['class', 'style'] 
         });
 
-        // Failsafe: отключаем наблюдатель через 5 секунд во избежание утечек
         setTimeout(() => {
             if (tildaObserver) {
                 tildaObserver.disconnect();
@@ -1004,7 +1035,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Экспорт дебаггера только если он подключен (Инкапсуляция)
     if (window.__MAKE_DEBUG_UTILS__) {
         const D = window.__MAKE_DEBUG_UTILS__;
         loadCarsData = D.debugWrap(loadCarsData, 'loadCarsData');
@@ -1028,6 +1058,5 @@ document.addEventListener('DOMContentLoaded', () => {
         D.debugInfo('INIT', 'Дебаггер подключен. Введите makeCatalogDebug.dump() в консоль.');
     }
     
-    // Запуск приложения
     loadCarsData();
 });
