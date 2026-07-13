@@ -1,16 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
-    // КОНФИГУРАЦИЯ КАТАЛОГА (Универсальная)
+    // КОНФИГУРАЦИЯ КАТАЛОГА
     // ==========================================
     const APP_CONFIG = {
         feedUrls: [
-            'https://dhost.makeagency.ru/playback/test-catalog-feed.json,
-            'https://s3.hommenest.ru/digital/backup/test-catalog-feed.json'
+            'https://dhost.makeagency.ru/playback/udm-feed.json',
+            '/test-catalog-feed.json' // Наш новый тестовый фид
         ],
         cacheName: 'make_catalog_cache',
         cacheTTL: 25 * 60 * 1000, 
         
-        // Управление фильтрами: просто измените enabled: true/false
         filters: [
             { key: 'salon',            type: 'multiselect', label: 'Автосалон',       enabled: true },
             { key: 'price',            type: 'range',       label: 'Стоимость, ₽',    enabled: true },
@@ -22,10 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'drive',            type: 'select',      label: 'Тип привода',     enabled: true },
             { key: 'engine_type',      type: 'select',      label: 'Двигатель',       enabled: true },
             { key: 'color',            type: 'select',      label: 'Цвет кузова',     enabled: true },
-            { key: 'wheel',            type: 'toggle',      label: 'Руль',            enabled: true },
-            { key: 'pts',              type: 'select',      label: 'Тип ПТС',         enabled: true },
-            { key: 'owners_number',    type: 'select',      label: 'Владельцев',      enabled: true },
-            { key: 'engine_volume',    type: 'select',      label: 'Объем двигателя', enabled: true }
+            { key: 'wheel',            type: 'toggle',      label: 'Руль',            enabled: true }
         ]
     };
 
@@ -34,12 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
         popupHooks: ['#popup:model', '#popup:report'],
         getSelectors: (name) => [
             `input[name="${name}"]`, `textarea[name="${name}"]`, `select[name="${name}"]`,
-            `input[data-tilda-name="${name}"]`, `textarea[data-tilda-name="${name}"]`,
-            `select[data-tilda-name="${name}"]`, `[data-tilda-name="${name}"]`, `[data-original-name="${name}"]`
+            `input[data-tilda-name="${name}"]`, `textarea[data-tilda-name="${name}"]`, `[data-tilda-name="${name}"]`
         ]
     };
 
-    // ========== DOM КЭШ И ХРАНИЛИЩА ==========
+    // ========== DOM КЭШ ==========
     const FDOM = {
         cardsContainer: document.getElementById('cards-grid'),
         randomGrid: document.querySelector('[data-make-random-grid]'),
@@ -49,18 +44,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const hasFullCatalog = !!FDOM.cardsContainer;
     const hasRandomCatalog = !!FDOM.randomGrid;
-    const randomCatalogLimit = hasRandomCatalog ? Math.max(1, parseInt(FDOM.randomGrid.getAttribute('data-limit') || '9', 10)) : 9;
 
     let cars = [];
     let filteredCars = [];
     let lastLeadCar = null;
-    window.filterInstances = { multiselects: {}, ranges: {} }; // Хранилище объектов сложных фильтров
+    window.filterInstances = { multiselects: {}, ranges: {} };
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"><rect width="100%" height="100%" fill="#e2e8f0"/><text x="50%" y="50%" font-family="Arial" font-size="16" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Нет фото</text></svg>'
     );
 
-    // ========== УТИЛИТЫ И БЕЗОПАСНОСТЬ ==========
+    // ========== УТИЛИТЫ ==========
     function escapeHtml(value) {
         if (value === null || value === undefined) return '';
         return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -68,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatNum(n) { return Number(n).toLocaleString('ru-RU'); }
     function debounce(func, wait) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func(...args), wait); }; }
 
-    // Компенсация скролла (Layout Shift Fix)
+    // Компенсация скролла
     let scrollbarWidth = null;
     function getScrollbarWidth() {
         if (scrollbarWidth !== null) return scrollbarWidth;
@@ -110,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(e) {}
     }
 
-    // ========== URL МЕНЕДЖЕР (Динамический) ==========
+    // ========== URL МЕНЕДЖЕР ==========
     class URLManager {
         constructor() { this.init(); }
         init() {
@@ -148,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     setP(f.key, document.querySelector(`#tog-${f.key} .is-active`)?.dataset.val);
                 }
             });
-
             window.history.replaceState(null, '', url);
         }
         loadFiltersFromUrl() {
@@ -201,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.urlManager = new URLManager();
 
-    // ========== МОДАЛЬНОЕ ОКНО ==========
+    // ========== МОДАЛЬНОЕ ОКНО (Обновленное для Split-Screen) ==========
     class CarDetailModal {
         constructor() {
             this.isOpen = false;
@@ -231,6 +224,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (e.key === 'ArrowRight') this.nextImage();
                 if (e.key === 'ArrowLeft') this.prevImage();
             });
+
+            // Закрытие по клику на оверлей вне модалки
+            this.overlay.addEventListener('click', (e) => {
+                if (e.target === this.overlay) this.close();
+            });
         }
         open(car) {
             this.currentCar = car;
@@ -238,13 +236,23 @@ document.addEventListener('DOMContentLoaded', () => {
             window.urlManager.updateUrl(car.id);
             this.renderGallery(car);
             
+            // Рендер характеристик (Pills)
+            const pillsContainer = this.overlay.querySelector('#modalPills');
+            pillsContainer.innerHTML = '';
+            if (car.year) pillsContainer.innerHTML += `<span class="ctag">${car.year} год</span>`;
+            if (car.run) pillsContainer.innerHTML += `<span class="ctag">${formatNum(car.run)} км</span>`;
+            if (car.gearbox) pillsContainer.innerHTML += `<span class="ctag">${car.gearbox}</span>`;
+            if (car.engine_volume) pillsContainer.innerHTML += `<span class="ctag">${car.engine_volume} л</span>`;
+
+            // Подробные характеристики (Grid)
             const specsContainer = this.overlay.querySelector('#modalSpecs');
             const specs = [
-                { label: 'Год выпуска', value: car.year ? `${car.year} год` : 'Не указан' },
-                { label: 'Пробег', value: car.run ? `${formatNum(car.run)} км` : 'Не указан' },
                 { label: 'Кузов', value: car.body_type || 'Не указан' },
-                { label: 'Коробка', value: car.gearbox || 'Не указана' },
-                { label: 'Салон', value: car.salon || 'Не указан' }
+                { label: 'Привод', value: car.drive || 'Не указан' },
+                { label: 'Двигатель', value: car.engine_type || 'Не указан' },
+                { label: 'Цвет', value: car.color || 'Не указан' },
+                { label: 'Салон', value: car.salon || 'Не указан' },
+                { label: 'ПТС', value: car.pts || 'Оригинал' }
             ];
             specsContainer.innerHTML = specs.map(s => 
                 `<div class="modal-spec-tile"><div class="modal-spec-label">${escapeHtml(s.label)}</div><div class="modal-spec-value">${escapeHtml(s.value)}</div></div>`
@@ -252,22 +260,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.overlay.querySelector('#modalTitle').textContent = car.mark_id;
             this.overlay.querySelector('#modalPrice').textContent = car.price ? `${formatNum(car.price)} ₽` : 'Цена по запросу';
+            
             const descBlock = this.overlay.querySelector('#modalDescBlock');
             if (car.description) {
                 this.overlay.querySelector('#modalDesc').innerHTML = escapeHtml(car.description).replace(/\n/g, '<br>');
                 descBlock.style.display = 'block';
             } else descBlock.style.display = 'none';
 
+            // Настройка кнопок захвата лида
             const applyBtns = this.overlay.querySelectorAll('.modal-apply-btn, .modal-calc-btn');
             applyBtns.forEach(btn => {
                 btn.dataset.carTitle = car.mark_id;
-                btn.dataset.carPrice = car.price || '';
-                btn.dataset.carSalon = car.salon || '';
             });
 
             lockBodyScroll();
             this.overlay.style.display = 'flex';
             this.overlay.classList.remove('hidden');
+            // Сбрасываем скролл правой колонки наверх
+            const rightCol = this.overlay.querySelector('.modal-right');
+            if (rightCol) rightCol.scrollTop = 0;
+            
             setTimeout(() => this.overlay.classList.add('visible'), 10);
         }
         close(opts = {}) {
@@ -311,7 +323,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ========== КОМПОНЕНТЫ ФИЛЬТРОВ ==========
     
-    // 1. Мультиселект
     class MultiSelect {
         constructor(container, placeholder) {
             this.container = container;
@@ -373,7 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
         getSelectedValues() { return Array.from(this.selectedValues); }
     }
 
-    // 2. Двойной ползунок (Range Slider)
     class FastRangeSlider {
         constructor(key, minInputId, maxInputId) {
             this.key = key;
@@ -419,7 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.addEventListener('mouseup', this._onMouseUp);
             document.addEventListener('touchmove', this._onTouchMove, {passive: false});
             document.addEventListener('touchend', this._onTouchEnd);
-            (thumb === 'min' ? this.thumbMin : this.thumbMax).classList.add('dragging');
         }
         stopDrag() {
             if (!this.isDragging) return;
@@ -429,7 +438,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.removeEventListener('mouseup', this._onMouseUp);
             document.removeEventListener('touchmove', this._onTouchMove);
             document.removeEventListener('touchend', this._onTouchEnd);
-            this.thumbMin.classList.remove('dragging'); this.thumbMax.classList.remove('dragging');
             applyFilters();
         }
         getClientX(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
@@ -483,36 +491,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <label class="filter-label">${f.label}</label>`;
             
             if (f.type === 'multiselect') {
-                html += `
-                <div class="multiselect" id="ms-${f.key}">
-                  <div class="multiselect-trigger">
-                    <div class="multiselect-selected"><span class="multiselect-placeholder">Любой выбор</span></div>
-                    <svg class="multiselect-arrow" viewBox="0 0 10 7" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </div>
-                  <div class="multiselect-dropdown hidden"></div>
-                </div>`;
+                html += `<div class="multiselect" id="ms-${f.key}">
+                  <div class="multiselect-trigger"><div class="multiselect-selected"><span class="multiselect-placeholder">Любой выбор</span></div><svg class="multiselect-arrow" viewBox="0 0 10 7" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                  <div class="multiselect-dropdown hidden"></div></div>`;
             } else if (f.type === 'select') {
                 html += `<select class="f-select" id="sel-${f.key}"><option value="">Любой выбор</option></select>`;
             } else if (f.type === 'range') {
-                html += `
-                <div class="double-range" id="${f.key}-range-wrap">
-                  <div class="range-track" id="${f.key}-track">
-                    <div class="range-fill" id="${f.key}-fill"></div>
-                    <div class="thumb" id="${f.key}-thumb-min" role="slider" tabindex="0"></div>
-                    <div class="thumb" id="${f.key}-thumb-max" role="slider" tabindex="0"></div>
-                  </div>
-                </div>
-                <div class="range-row">
-                  <input type="number" class="f-input" id="range-${f.key}-min" placeholder="От">
-                  <input type="number" class="f-input" id="range-${f.key}-max" placeholder="До">
-                </div>`;
+                html += `<div class="double-range" id="${f.key}-range-wrap"><div class="range-track" id="${f.key}-track"><div class="range-fill" id="${f.key}-fill"></div><div class="thumb" id="${f.key}-thumb-min" role="slider" tabindex="0"></div><div class="thumb" id="${f.key}-thumb-max" role="slider" tabindex="0"></div></div></div>
+                <div class="range-row"><input type="number" class="f-input" id="range-${f.key}-min" placeholder="От"><input type="number" class="f-input" id="range-${f.key}-max" placeholder="До"></div>`;
             } else if (f.type === 'toggle') {
-                html += `
-                <div class="toggle-row" id="tog-${f.key}">
-                  <button type="button" class="toggle-opt is-active" data-val="all">Все</button>
-                  <button type="button" class="toggle-opt" data-val="left">Левый</button>
-                  <button type="button" class="toggle-opt" data-val="right">Правый</button>
-                </div>`;
+                html += `<div class="toggle-row" id="tog-${f.key}"><button type="button" class="toggle-opt is-active" data-val="all">Все</button><button type="button" class="toggle-opt" data-val="left">Левый</button><button type="button" class="toggle-opt" data-val="right">Правый</button></div>`;
             }
             html += `</div><div class="f-sep"></div>`;
         });
@@ -571,7 +559,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Базовые события поиска и мобильной адаптации
         if(FDOM.search) FDOM.search.addEventListener('input', debounce(applyFilters, 400));
         if(FDOM.sort) FDOM.sort.addEventListener('change', applyFilters);
 
@@ -625,24 +612,25 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCards(filteredCars.slice(0, 32), FDOM.cardsContainer);
     }
 
-    // ========== МОБИЛЬНАЯ АДАПТАЦИЯ (Перемещение DOM-узла) ==========
+    // ========== МОБИЛЬНАЯ АДАПТАЦИЯ ==========
     function handleMobileDrawer() {
         const drawerBody = document.getElementById('mob-drawer-body');
-        const sidebarHead = document.querySelector('.sidebar-head');
         const filtersContainer = document.getElementById('filters-container');
+        const sidebar = document.querySelector('.sidebar');
         
-        if (!drawerBody || !sidebarHead || !filtersContainer) return;
+        if (!drawerBody || !sidebar || !filtersContainer) return;
         
-        const isMobile = window.innerWidth <= 880;
+        const isMobile = window.innerWidth <= 900;
         if (isMobile && !drawerBody.contains(filtersContainer)) {
             drawerBody.appendChild(filtersContainer);
-        } else if (!isMobile && !sidebarHead.nextElementSibling?.isEqualNode(filtersContainer)) {
-            sidebarHead.after(filtersContainer);
+        } else if (!isMobile && !sidebar.contains(filtersContainer)) {
+            // Возвращаем фильтры в сайдбар перед кнопками
+            const sidebarFoot = sidebar.querySelector('.sidebar-foot');
+            if (sidebarFoot) sidebar.insertBefore(filtersContainer, sidebarFoot);
         }
     }
     window.addEventListener('resize', handleMobileDrawer);
 
-    // Управление шторкой и сбросом
     document.getElementById('mobile-filter-toggle')?.addEventListener('click', () => {
         document.getElementById('mob-overlay').classList.add('is-open');
         document.getElementById('mob-drawer').classList.add('is-open');
@@ -657,6 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('mob-close')?.addEventListener('click', closeDrawer);
     document.getElementById('mob-overlay')?.addEventListener('click', closeDrawer);
 
+    // Сброс фильтров
     document.getElementById('clear-filters')?.addEventListener('click', () => {
         if(FDOM.search) FDOM.search.value = '';
         if(FDOM.sort) FDOM.sort.value = 'default';
@@ -673,7 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const slider = window.filterInstances.ranges[f.key];
                 if (slider) {
                     slider.currentMin = slider.min; slider.currentMax = slider.max;
-                    slider.minInput.value = ''; slider.maxInput.value = ''; // Очищаем инпуты
+                    slider.minInput.value = ''; slider.maxInput.value = ''; 
                     slider.updateSlider();
                 }
             } else if (f.type === 'toggle') {
@@ -685,6 +674,24 @@ document.addEventListener('DOMContentLoaded', () => {
         applyFilters();
         closeDrawer();
     });
+
+    // ========== ЛОГИКА СОКРАЩЕННОГО (РАНДОМНОГО) КАТАЛОГА ==========
+    // Эта функция вызывается только для виджета на главной странице (catalog-reduced.html)
+    function initRandomCatalog() {
+        if (!hasRandomCatalog) return;
+        
+        // 1. Берем весь массив машин и перемешиваем его (Math.random)
+        const shuffled = cars.sort(() => 0.5 - Math.random());
+        
+        // 2. Отрезаем нужное количество машин (по умолчанию 9)
+        const randomCars = shuffled.slice(0, randomCatalogLimit);
+        
+        // 3. Рисуем их в сетку
+        renderCards(randomCars, FDOM.randomGrid);
+        
+        // Примечание: Фильтры для этого виджета не инициализируются намеренно,
+        // так как его задача - просто показать N случайных машин для завлечения клиента.
+    }
 
     // ========== РЕНДЕР КАРТОЧЕК ==========
     function createCardHTML(car) {
@@ -733,6 +740,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.querySelectorAll('img.lazy-image').forEach(img => observer.observe(img));
     }
 
+    // Делегирование кликов (открытие модалки и карусель на карточках)
     function bindGridEvents(container) {
         if (!container) return;
         container.addEventListener('click', (e) => {
@@ -809,11 +817,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 salon: data.salon
             }));
             
-            if (hasFullCatalog) initFilters();
-            else if (hasRandomCatalog) {
-                const randomCars = cars.sort(() => 0.5 - Math.random()).slice(0, randomCatalogLimit);
-                renderCards(randomCars, FDOM.randomGrid);
+            // Распределение логики в зависимости от типа виджета на странице
+            if (hasFullCatalog) {
+                initFilters();
+            } else if (hasRandomCatalog) {
+                initRandomCatalog();
             }
+
         } else {
             if(FDOM.cardsContainer) FDOM.cardsContainer.innerHTML = '<div class="no-results">Ошибка загрузки данных</div>';
         }
@@ -844,33 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
             scheduleFillTildaFields(getPopupHook(trigger));
         }
     });
-
-    // ========== ИНИЦИАЛИЗАЦИЯ ДЕБАГГЕРА ==========
-    if (window.__MAKE_DEBUG_UTILS__) {
-        const D = window.__MAKE_DEBUG_UTILS__;
-        loadCarsData = D.debugWrap(loadCarsData, 'loadCarsData');
-        applyFilters = D.debugWrap(applyFilters, 'applyFilters');
-        renderCards = D.debugWrap(renderCards, 'renderCards');
-        
-        D.debugWrapPrototype(URLManager.prototype, 'URLManager');
-        D.debugWrapPrototype(CarDetailModal.prototype, 'CarDetailModal', ['prevImage', 'nextImage']);
-        D.debugWrapPrototype(MultiSelect.prototype, 'MultiSelect', ['renderDropdown']);
-
-        window.makeCatalogDebug = {
-            dump: function(label = 'manual-dump') {
-                D.debugLog('SNAPSHOT ' + label, { carsCount: cars.length, filteredCount: filteredCars.length, urlState: window.location.search });
-                if (cars.length) D.debugTable('dump.cars', cars);
-                return { cars, filteredCars, lastLeadCar };
-            },
-            clearCache: async () => {
-                const db = await openCacheDB();
-                db.transaction('feed', 'readwrite').objectStore('feed').delete('current');
-                D.debugLog('CACHE', 'Кэш IndexedDB принудительно очищен');
-            }
-        };
-        D.debugInfo('INIT', 'Дебаггер успешно подключен. Введите makeCatalogDebug в консоль.');
-    }
-
+    
     // Запуск приложения
     loadCarsData();
 });
