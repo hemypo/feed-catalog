@@ -10,8 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cacheName: 'make_catalog_cache',
         cacheTTL: 25 * 60 * 1000, 
         
-        // ВНИМАНИЕ: Новый тип 'minmax' для генерации парных селектов (От и До)
-        // В options для 'toggle' задаются значения и подписи кнопок
         filters: [
             { key: 'original_mark_id', type: 'select', label: 'Марка',           enabled: true },
             { key: 'model',            type: 'select', label: 'Модель',          enabled: true, dependsOn: 'original_mark_id' },
@@ -55,12 +53,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let cars = [];
     let filteredCars = [];
     let lastLeadCar = null;
-    window.filterInstances = { multiselects: {} };
+    
+    // ИСПРАВЛЕНИЕ: Инкапсулируем глобальные переменные
+    const filterInstances = { multiselects: {} };
     
     let currentPage = 1;
     let pageSize = 32;
-    
-    // ИСПРАВЛЕНИЕ: Выносим IntersectionObserver в глобальную область видимости
     let lazyObserver = null;
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
@@ -88,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const seoContainer = document.getElementById('seo-links-container');
         if (!seoContainer || !cars.length) return;
         const baseUrl = window.location.href.split('?')[0];
-        const html = cars.map(car => `<a href="${baseUrl}?car=${car.id}">${escapeHtml(car.mark_id)} ${car.year}</a>`).join(' | ');
+        const html = cars.map(car => `<a href="${baseUrl}?car=${car.id}">${escapeHtml(car.mark_id)} ${escapeHtml(car.year)}</a>`).join(' | ');
         seoContainer.innerHTML = html;
     }
 
@@ -164,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
                 if (f.type === 'multiselect') {
-                    const sel = window.filterInstances.multiselects[f.key]?.getSelectedValues() || [];
+                    const sel = filterInstances.multiselects[f.key]?.getSelectedValues() || [];
                     setP(f.key, sel.join(','));
                 } else if (f.type === 'select') {
                     setP(f.key, document.getElementById(`sel-${f.key}`)?.value);
@@ -187,10 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
             APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
                 if (f.type === 'multiselect') {
                     const val = url.searchParams.get(f.key);
-                    if (val && window.filterInstances.multiselects[f.key]) {
-                        val.split(',').forEach(v => window.filterInstances.multiselects[f.key].selectedValues.add(v));
-                        window.filterInstances.multiselects[f.key].renderSelected();
-                        window.filterInstances.multiselects[f.key].renderDropdown();
+                    if (val && filterInstances.multiselects[f.key]) {
+                        val.split(',').forEach(v => filterInstances.multiselects[f.key].selectedValues.add(v));
+                        filterInstances.multiselects[f.key].renderSelected();
+                        filterInstances.multiselects[f.key].renderDropdown();
                     }
                 } else if (f.type === 'select') {
                     const el = document.getElementById(`sel-${f.key}`);
@@ -218,16 +216,16 @@ document.addEventListener('DOMContentLoaded', () => {
         handleUrlChange() {
             const carId = new URLSearchParams(window.location.search).get('car');
             if (carId) this.openCarFromUrl(carId);
-            else if (window.carDetailModal?.isOpen) window.carDetailModal.close({ skipUrlClear: true });
+            else if (carDetailModal?.isOpen) carDetailModal.close({ skipUrlClear: true });
         }
         openCarFromUrl(carId) {
             const car = cars.find(c => c.id?.toString() === carId.toString());
-            if (car && window.carDetailModal) setTimeout(() => window.carDetailModal.open(car), 300);
+            if (car && carDetailModal) setTimeout(() => carDetailModal.open(car), 300);
         }
     }
-    window.urlManager = new URLManager();
+    const urlManager = new URLManager();
 
-    // ========== МОДАЛЬНОЕ ОКНО ==========
+    // ========== МОДАЛЬНОЕ ОКНО С FOCUS TRAP ==========
     class CarDetailModal {
         constructor() {
             this.isOpen = false;
@@ -235,6 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.modal = this.overlay?.querySelector('.modal-box');
             this.track = this.overlay?.querySelector('#modalGalleryTrack');
             this.counterEl = this.overlay?.querySelector('#modalCounter');
+            this.previousFocus = null;
+            this.handleKeyDown = this.handleKeyDown.bind(this);
             this.init();
         }
         init() {
@@ -251,29 +251,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 thumbs.forEach((t, i) => t.classList.toggle('is-active', i === idx));
             }, 50));
 
-            document.addEventListener('keydown', e => {
-                if (!this.isOpen) return;
-                if (e.key === 'Escape') this.close();
-                if (e.key === 'ArrowRight') this.nextImage();
-                if (e.key === 'ArrowLeft') this.prevImage();
-            });
-
             this.overlay.addEventListener('click', (e) => {
                 if (e.target === this.overlay) this.close();
             });
         }
+        
+        handleKeyDown(e) {
+            if (!this.isOpen) return;
+            
+            if (e.key === 'Escape') {
+                this.close();
+                return;
+            }
+            if (e.key === 'ArrowRight') this.nextImage();
+            if (e.key === 'ArrowLeft') this.prevImage();
+
+            // ИСПРАВЛЕНИЕ: Реализация Focus Trap
+            if (e.key === 'Tab') {
+                const focusableElements = this.overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                if (!focusableElements.length) return;
+
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+
+                if (e.shiftKey) { // Shift + Tab
+                    if (document.activeElement === firstElement) {
+                        e.preventDefault();
+                        lastElement.focus();
+                    }
+                } else { // Tab
+                    if (document.activeElement === lastElement) {
+                        e.preventDefault();
+                        firstElement.focus();
+                    }
+                }
+            }
+        }
+
         open(car) {
             this.currentCar = car;
             this.isOpen = true;
-            window.urlManager.updateUrl(car.id);
+            this.previousFocus = document.activeElement; // Сохраняем элемент, с которого открыли модалку
+            
+            urlManager.updateUrl(car.id);
             this.renderGallery(car);
             
+            // ИСПРАВЛЕНИЕ: Строгое экранирование (XSS) всех динамических значений
             const pillsContainer = this.overlay.querySelector('#modalPills');
             pillsContainer.innerHTML = '';
-            if (car.year) pillsContainer.innerHTML += `<span class="ctag">${car.year} год</span>`;
-            if (car.run) pillsContainer.innerHTML += `<span class="ctag">${formatNum(car.run)} км</span>`;
-            if (car.gearbox) pillsContainer.innerHTML += `<span class="ctag">${car.gearbox}</span>`;
-            if (car.engine_volume) pillsContainer.innerHTML += `<span class="ctag">${car.engine_volume} л</span>`;
+            if (car.year) pillsContainer.innerHTML += `<span class="ctag">${escapeHtml(car.year)} год</span>`;
+            if (car.run) pillsContainer.innerHTML += `<span class="ctag">${escapeHtml(formatNum(car.run))} км</span>`;
+            if (car.gearbox) pillsContainer.innerHTML += `<span class="ctag">${escapeHtml(car.gearbox)}</span>`;
+            if (car.engine_volume) pillsContainer.innerHTML += `<span class="ctag">${escapeHtml(car.engine_volume)} л</span>`;
 
             const specsContainer = this.overlay.querySelector('#modalSpecs');
             const specs = [
@@ -307,18 +336,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const rightCol = this.overlay.querySelector('.modal-right');
             if (rightCol) rightCol.scrollTop = 0;
             
-            setTimeout(() => this.overlay.classList.add('visible'), 10);
+            // Включаем Focus Trap и ловим клавиши
+            document.addEventListener('keydown', this.handleKeyDown);
+            
+            setTimeout(() => {
+                this.overlay.classList.add('visible');
+                // Фокус на кнопку закрытия по умолчанию (для клавиатурной доступности)
+                const closeBtn = this.overlay.querySelector('.modal-close');
+                if (closeBtn) closeBtn.focus();
+            }, 10);
         }
+        
         close(opts = {}) {
             this.isOpen = false;
-            if (!opts.skipUrlClear) window.urlManager.clearCarUrl();
+            document.removeEventListener('keydown', this.handleKeyDown);
+            
+            if (!opts.skipUrlClear) urlManager.clearCarUrl();
             this.overlay.classList.remove('visible');
+            
             setTimeout(() => {
                 this.overlay.classList.add('hidden');
                 this.overlay.style.display = 'none';
                 unlockBodyScroll();
+                // Возвращаем фокус на место, откуда открыли модалку
+                if (this.previousFocus) this.previousFocus.focus();
             }, 300);
         }
+        
         renderGallery(car) {
             this.track.innerHTML = '';
             const thumbsContainer = this.overlay.querySelector('#modalThumbs');
@@ -336,6 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const thumb = document.createElement('button');
                 thumb.className = `modal-thumb ${idx === 0 ? 'is-active' : ''}`;
+                // Безопасная вставка src
                 thumb.innerHTML = `<img src="${escapeHtml(src)}" alt="">`;
                 thumb.addEventListener('click', () => {
                     this.track.scrollTo({ left: this.track.clientWidth * idx, behavior: 'smooth' });
@@ -346,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
         prevImage() { this.track.scrollBy({ left: -this.track.clientWidth, behavior: 'smooth' }); }
         nextImage() { this.track.scrollBy({ left: this.track.clientWidth, behavior: 'smooth' }); }
     }
-    window.carDetailModal = new CarDetailModal();
+    const carDetailModal = new CarDetailModal();
 
     // ========== КОМПОНЕНТЫ ФИЛЬТРОВ ==========
     
@@ -420,7 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '';
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
             html += `<div class="filter-group" data-key="${f.key}">
-                <label class="filter-label">${f.label}</label>`;
+                <label class="filter-label">${escapeHtml(f.label)}</label>`;
             
             if (f.type === 'multiselect') {
                 html += `<div class="multiselect" id="ms-${f.key}">
@@ -471,7 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 let parentVals = [];
                 if (parentF.type === 'multiselect') {
-                    parentVals = window.filterInstances.multiselects[parentKey]?.getSelectedValues() || [];
+                    parentVals = filterInstances.multiselects[parentKey]?.getSelectedValues() || [];
                 } else if (parentF.type === 'select') {
                     const v = document.getElementById(`sel-${parentKey}`)?.value;
                     if (v) parentVals.push(v);
@@ -494,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     else el.value = '';
                 }
             } else if (f.type === 'multiselect') {
-                const ms = window.filterInstances.multiselects[f.key];
+                const ms = filterInstances.multiselects[f.key];
                 if (ms) {
                     ms.setOptions(uniqueVals);
                     ms.selectedValues = new Set([...ms.selectedValues].filter(v => uniqueVals.includes(v)));
@@ -526,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (el) {
                     const ms = new MultiSelect(el, 'Любой выбор');
                     if (!f.dependsOn) ms.setOptions(getUnique(f.key));
-                    window.filterInstances.multiselects[f.key] = ms;
+                    filterInstances.multiselects[f.key] = ms;
                 }
             } else if (f.type === 'minmax') {
                 const values = cars.map(c => parseInt(c[f.key])).filter(v => !isNaN(v));
@@ -563,7 +608,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // ИСПРАВЛЕНИЕ 1: Заменяем FDOM.sort на document.getElementById('sort-select')
         const sortSelect = document.getElementById('sort-select');
         if (sortSelect) sortSelect.addEventListener('change', applyFilters);
 
@@ -583,41 +627,53 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('.toolbar')?.scrollIntoView({ behavior: 'smooth' });
         });
 
-        window.urlManager.loadFiltersFromUrl();
+        urlManager.loadFiltersFromUrl();
         handleMobileDrawer(); 
         applyFilters();
     }
 
+    // ИСПРАВЛЕНИЕ: Кэширование DOM перед циклом (оптимизация производительности)
     function applyFilters() {
         if (!hasFullCatalog) return;
         
         updateDependencies();
-        
-        // ИСПРАВЛЕНИЕ 2: Заменяем FDOM.sort на document.getElementById('sort-select')
         const sortBy = document.getElementById('sort-select')?.value || 'default';
 
-        filteredCars = cars.filter(car => {
+        // 1. Считываем значения из DOM ровно один раз
+        const activeFiltersData = [];
+        APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
+            let val = null;
+            if (f.type === 'multiselect') {
+                val = filterInstances.multiselects[f.key]?.getSelectedValues() || [];
+            } else if (f.type === 'select') {
+                val = document.getElementById(`sel-${f.key}`)?.value;
+            } else if (f.type === 'minmax') {
+                val = {
+                    min: parseInt(document.getElementById(`sel-${f.key}-min`)?.value),
+                    max: parseInt(document.getElementById(`sel-${f.key}-max`)?.value)
+                };
+            } else if (f.type === 'toggle') {
+                val = document.querySelector(`#tog-${f.key} .is-active`)?.dataset.val || 'all';
+            }
+            activeFiltersData.push({ config: f, value: val });
+        });
 
-            for (const f of APP_CONFIG.filters) {
-                if (!f.enabled) continue;
-                const val = car[f.key];
+        // 2. Выполняем фильтрацию только на основе полученных значений из памяти
+        filteredCars = cars.filter(car => {
+            for (const { config: f, value: val } of activeFiltersData) {
+                const carVal = car[f.key];
 
                 if (f.type === 'multiselect') {
-                    const sel = window.filterInstances.multiselects[f.key]?.getSelectedValues() || [];
-                    if (sel.length && !sel.includes(val)) return false;
+                    if (val.length && !val.includes(String(carVal))) return false;
                 } else if (f.type === 'select') {
-                    const sel = document.getElementById(`sel-${f.key}`)?.value;
-                    if (sel && String(val) !== sel) return false;
+                    if (val && String(carVal) !== val) return false;
                 } else if (f.type === 'minmax') {
-                    const min = parseInt(document.getElementById(`sel-${f.key}-min`)?.value);
-                    const max = parseInt(document.getElementById(`sel-${f.key}-max`)?.value);
-                    const numVal = parseInt(val);
-                    if (!isNaN(min) && numVal < min) return false;
-                    if (!isNaN(max) && numVal > max) return false;
+                    const numVal = parseInt(carVal);
+                    if (!isNaN(val.min) && numVal < val.min) return false;
+                    if (!isNaN(val.max) && numVal > val.max) return false;
                 } else if (f.type === 'toggle') {
-                    const active = document.querySelector(`#tog-${f.key} .is-active`)?.dataset.val || 'all';
-                    if (active !== 'all') {
-                        if (String(val).toLowerCase() !== String(active).toLowerCase()) return false;
+                    if (val !== 'all') {
+                        if (String(carVal).toLowerCase() !== String(val).toLowerCase()) return false;
                     }
                 }
             }
@@ -631,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sortBy === 'run-asc') filteredCars.sort((a, b) => a.run - b.run);
         if (sortBy === 'run-desc') filteredCars.sort((a, b) => b.run - a.run);
 
-        window.urlManager.syncFiltersToUrl();
+        urlManager.syncFiltersToUrl();
         
         currentPage = 1;
         renderPagination();
@@ -708,15 +764,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('mob-overlay')?.addEventListener('click', closeDrawer);
 
     document.getElementById('clear-filters')?.addEventListener('click', () => {
-        // ИСПРАВЛЕНИЕ 3: Заменяем FDOM.sort на document.getElementById('sort-select')
         const sortEl = document.getElementById('sort-select');
         if (sortEl) sortEl.value = 'default';
         
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
             if (f.type === 'multiselect') {
-                window.filterInstances.multiselects[f.key]?.selectedValues.clear();
-                window.filterInstances.multiselects[f.key]?.renderSelected();
-                window.filterInstances.multiselects[f.key]?.renderDropdown();
+                filterInstances.multiselects[f.key]?.selectedValues.clear();
+                filterInstances.multiselects[f.key]?.renderSelected();
+                filterInstances.multiselects[f.key]?.renderDropdown();
             } else if (f.type === 'select') {
                 const el = document.getElementById(`sel-${f.key}`);
                 if (el) el.value = '';
@@ -772,13 +827,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
     }
 
-    // ИСПРАВЛЕНИЕ 4: Используем глобальный lazyObserver и отключаем его перед созданием нового
     function renderCards(list, container) {
         if (!container) return;
         if (!list.length) { container.innerHTML = `<div class="no-results">Ничего не найдено</div>`; return; }
         container.innerHTML = list.map(car => createCardHTML(car)).join('');
         
-        // Отключаем предыдущий observer для предотвращения утечки памяти
         if (lazyObserver) {
             lazyObserver.disconnect();
         }
@@ -823,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     img.dataset.idx = idx;
                     img.src = car.images[idx];
                 } else {
-                    window.carDetailModal.open(car);
+                    carDetailModal.open(car);
                 }
             }
         });
@@ -893,29 +946,65 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========== ИНТЕГРАЦИЯ С TILDA ==========
     function getPopupHook(trigger) { return trigger.getAttribute('href') || trigger.dataset.popupTarget || ''; }
     
-    function fillTildaFields(hook) {
-        if (!lastLeadCar?.title) return;
-        const selectors = TILDA_CONFIG.getSelectors(TILDA_CONFIG.modelFieldName).join(',');
-        const fields = document.querySelectorAll(selectors);
-        fields.forEach(f => {
-            f.value = lastLeadCar.title;
-            f.dispatchEvent(new Event('input', { bubbles: true }));
-            f.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-    }
+    // ИСПРАВЛЕНИЕ: Интеллектуальный MutationObserver вместо ненадежных таймаутов
+    let tildaObserver = null;
     
     function scheduleFillTildaFields(hook) {
-        [0, 100, 300, 800].forEach(delay => setTimeout(() => fillTildaFields(hook), delay));
+        if (!lastLeadCar?.title) return;
+
+        // Попытка заполнить поля сразу (если форма уже загружена)
+        const selectors = TILDA_CONFIG.getSelectors(TILDA_CONFIG.modelFieldName).join(',');
+        const tryFill = () => {
+            const fields = document.querySelectorAll(selectors);
+            let filled = false;
+            fields.forEach(f => {
+                if (f.value !== lastLeadCar.title) {
+                    f.value = lastLeadCar.title;
+                    f.dispatchEvent(new Event('input', { bubbles: true }));
+                    f.dispatchEvent(new Event('change', { bubbles: true }));
+                    filled = true;
+                }
+            });
+            return filled;
+        };
+
+        if (tryFill()) return;
+
+        // Если форма еще не отрендерена - создаем наблюдателя
+        if (tildaObserver) tildaObserver.disconnect();
+        
+        tildaObserver = new MutationObserver((mutations, obs) => {
+            if (tryFill()) {
+                obs.disconnect();
+                tildaObserver = null;
+            }
+        });
+
+        tildaObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style'] // Отлавливаем смену видимости попапов
+        });
+
+        // Failsafe: отключаем наблюдатель через 5 секунд во избежание утечек
+        setTimeout(() => {
+            if (tildaObserver) {
+                tildaObserver.disconnect();
+                tildaObserver = null;
+            }
+        }, 5000);
     }
 
     document.addEventListener('click', (e) => {
         const trigger = e.target.closest('a[href^="#popup:"]');
         if (trigger && TILDA_CONFIG.popupHooks.includes(getPopupHook(trigger))) {
-            window.carDetailModal.close();
+            carDetailModal.close();
             scheduleFillTildaFields(getPopupHook(trigger));
         }
     });
 
+    // Экспорт дебаггера только если он подключен (Инкапсуляция)
     if (window.__MAKE_DEBUG_UTILS__) {
         const D = window.__MAKE_DEBUG_UTILS__;
         loadCarsData = D.debugWrap(loadCarsData, 'loadCarsData');
