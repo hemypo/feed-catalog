@@ -20,7 +20,6 @@
   --radius:        12px;
   --radius-lg:     20px;
   
-  /* Интеграция с типографикой Tilda */
   --font-d:        var(--t-headline-font, 'Montserrat', sans-serif);
   --font-b:        var(--t-text-font, 'Inter', sans-serif);
   
@@ -35,17 +34,14 @@
 }
 
 .make-catalog *, .make-catalog *::before, .make-catalog *::after {
-  box-sizing: border-box; 
-  margin: 0; 
-  padding: 0;
+  box-sizing: border-box; margin: 0; padding: 0;
 }
-
 .make-catalog button { font-family: inherit; }
 
 /* ================================================================
    2. ЛЕЙАУТ КАТАЛОГА (ВЕРТИКАЛЬНЫЙ И ГОРИЗОНТАЛЬНЫЙ)
 ================================================================ */
-/* Вертикальный (Сайдбар слева) */
+/* Вертикальный */
 .make-catalog[data-filter-layout="vertical"] .catalog-wrap {
   max-width: 1440px; margin: 0 auto; padding: 24px 40px 80px;
   display: grid; grid-template-columns: var(--sidebar-w) 1fr;
@@ -60,7 +56,7 @@
   display: flex; flex-direction: column; gap: 12px; margin-top: 24px;
 }
 
-/* Горизонтальный (Фильтры сверху) */
+/* Горизонтальный */
 .make-catalog[data-filter-layout="horizontal"] .catalog-wrap {
   max-width: 1440px; margin: 0 auto; padding: 24px 40px 80px;
   display: flex; flex-direction: column; gap: 24px;
@@ -100,12 +96,10 @@
   background-repeat: no-repeat; background-position: right 12px center;
 }
 .make-catalog .f-select:focus { border-color: var(--color-text-main); }
-
-/* Мини-селекты От/До */
 .make-catalog .minmax-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .make-catalog .minmax-row .f-select { padding-left: 8px; }
 
-/* Тогглы (Переключатели) */
+/* Тогглы */
 .make-catalog .toggle-row { display: flex; gap: 4px; background: var(--color-bg-main); padding: 4px; border-radius: var(--radius-sm); flex-wrap: wrap; }
 .make-catalog .toggle-opt { flex: 1; min-width: 60px; height: 32px; border: none; border-radius: 6px; background: transparent; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); cursor: pointer; transition: all .18s; white-space: nowrap; }
 .make-catalog .toggle-opt.is-active { background: var(--color-white); color: var(--color-text-main); box-shadow: var(--shadow-sm); }
@@ -118,7 +112,7 @@
 .make-catalog .btn-apply:hover { background: var(--color-primary-hover); }
 .make-catalog .btn-apply:active { transform: scale(0.98); }
 
-/* Multiselect (Множественный выбор) */
+/* Multiselect */
 .make-catalog .multiselect { position: relative; }
 .make-catalog .multiselect-trigger {
   width: 100%; min-height: 40px; padding: 6px 32px 6px 12px; border-radius: var(--radius-sm);
@@ -130,10 +124,7 @@
 .make-catalog .multiselect-trigger.open .multiselect-arrow { transform: rotate(180deg); }
 .make-catalog .multiselect-selected { display: flex; flex-wrap: wrap; gap: 4px; }
 .make-catalog .multiselect-placeholder { color: var(--color-text-muted); font-size: 13px; }
-.make-catalog .multiselect-tag {
-  background: var(--color-bg-main); color: var(--color-text-main); padding: 4px 8px;
-  border-radius: 4px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px;
-}
+.make-catalog .multiselect-tag { background: var(--color-bg-main); color: var(--color-text-main); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .make-catalog .multiselect-tag-remove { cursor: pointer; opacity: .5; }
 .make-catalog .multiselect-tag-remove:hover { opacity: 1; }
 .make-catalog .multiselect-dropdown {
@@ -146,144 +137,75 @@
 .make-catalog .multiselect-option:hover { background-color: var(--color-bg-main); }
 .make-catalog .multiselect-checkbox { width: 18px; height: 18px; border: 1.5px solid var(--color-border); border-radius: 4px; position: relative; }
 .make-catalog .multiselect-checkbox.checked { background: var(--color-text-main); border-color: var(--color-text-main); }
-.make-catalog .multiselect-checkbox.checked::after {
-  content: ''; position: absolute; top: 2px; left: 6px; width: 4px; height: 8px;
-  border: solid var(--color-white); border-width: 0 2px 2px 0; transform: rotate(45deg);
-}
+.make-catalog .multiselect-checkbox.checked::after { content: ''; position: absolute; top: 2px; left: 6px; width: 4px; height: 8px; border: solid var(--color-white); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 
-/* Состояния заблокированных полей (Каскадные фильтры) */
-.make-catalog .f-select:disabled {
-  background-color: var(--color-bg-main);
-  color: var(--color-text-muted);
-  cursor: not-allowed;
-  border-color: transparent;
-  background-image: none;
-}
-.make-catalog .multiselect.is-disabled .multiselect-trigger {
-  background-color: var(--color-bg-main);
-  color: var(--color-text-muted);
-  cursor: not-allowed;
-  pointer-events: none;
-  border-color: transparent;
-}
-.make-catalog .multiselect.is-disabled .multiselect-placeholder {
-  color: var(--color-text-muted);
-}
+/* Заблокированные каскадные поля */
+.make-catalog .f-select:disabled { background-color: var(--color-bg-main); color: var(--color-text-muted); cursor: not-allowed; border-color: transparent; background-image: none; }
+.make-catalog .multiselect.is-disabled .multiselect-trigger { background-color: var(--color-bg-main); color: var(--color-text-muted); cursor: not-allowed; pointer-events: none; border-color: transparent; }
+.make-catalog .multiselect.is-disabled .multiselect-placeholder { color: var(--color-text-muted); }
 
 /* ================================================================
-   4. СЕТКА КАРТОЧЕК И ТУЛБАР
+   4. ТУЛБАР И СЕТКА КАРТОЧЕК
 ================================================================ */
 .make-catalog .cards-container { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .make-catalog .toolbar { display: none; align-items: center; gap: 16px; flex-wrap: wrap; }
-.make-catalog .btn-mob-filter { 
-  display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; 
-  border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); 
-  background: var(--color-white); font-size: 14px; font-weight: 600; cursor: pointer; 
-}
-
+.make-catalog .btn-mob-filter { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-white); font-size: 14px; font-weight: 600; cursor: pointer; }
 .make-catalog .car-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-.make-catalog .car-card {
-  background: var(--color-white); border-radius: var(--radius-lg); overflow: hidden;
-  box-shadow: var(--shadow-card); cursor: pointer; transition: transform .25s, box-shadow .25s;
-  display: flex; flex-direction: column;
-}
+.make-catalog .car-card { background: var(--color-white); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-card); cursor: pointer; transition: transform .25s, box-shadow .25s; display: flex; flex-direction: column; }
 .make-catalog .car-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
 
-/* Изображения в карточке */
 .make-catalog .card-img-wrap { position: relative; aspect-ratio: 16 / 10; background: #E8EAF4; overflow: hidden; }
 .make-catalog .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
 .make-catalog .car-card:hover .card-img-wrap img { transform: scale(1.05); }
 .make-catalog .img-badges { position: absolute; top: 12px; left: 12px; display: flex; gap: 6px; z-index: 2; }
-.make-catalog .badge-stock {
-  background: rgba(26, 27, 34, 0.7); backdrop-filter: blur(8px); color: var(--color-white);
-  padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;
-}
-.make-catalog .carousel-button {
-  position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px;
-  background: rgba(255, 255, 255, 0.9); border: none; border-radius: 50%; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; font-size: 16px; opacity: 0; transition: opacity .2s; z-index: 2;
-}
+.make-catalog .badge-stock { background: rgba(26, 27, 34, 0.7); backdrop-filter: blur(8px); color: var(--color-white); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.make-catalog .carousel-button { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; background: rgba(255, 255, 255, 0.9); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; opacity: 0; transition: opacity .2s; z-index: 2; }
 .make-catalog .car-card:hover .carousel-button { opacity: 1; }
 .make-catalog .carousel-button:hover { background: var(--color-white); }
 .make-catalog .carousel-button.prev { left: 8px; }
 .make-catalog .carousel-button.next { right: 8px; }
 
-/* Текстовая часть карточки */
 .make-catalog .card-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
 .make-catalog .card-name { font-family: var(--font-d); font-size: 18px; font-weight: 700; line-height: 1.3; }
 .make-catalog .card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .make-catalog .ctag { background: var(--color-bg-main); color: var(--color-text-secondary); padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; }
 .make-catalog .price-main { font-family: var(--font-d); font-size: 24px; font-weight: 800; }
 .make-catalog .card-btns { margin-top: auto; }
-.make-catalog .card-btn {
-  width: 100%; height: 44px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm);
-  background: transparent; font-size: 14px; font-weight: 600; color: var(--color-text-main) !important;
-  display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all .18s;
-}
+.make-catalog .card-btn { width: 100%; height: 44px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: transparent; font-size: 14px; font-weight: 600; color: var(--color-text-main) !important; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all .18s; }
 .make-catalog .card-btn:hover { background: var(--color-text-main); color: var(--color-white) !important; border-color: var(--color-text-main); }
+
+/* Пустые состояния */
+.make-catalog .no-results, .make-catalog .loader { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--color-text-muted); font-size: 16px; }
 
 /* ================================================================
    5. ПАГИНАЦИЯ
 ================================================================ */
-.make-catalog .pagination-container {
-  display: flex; flex-direction: column; gap: 16px; align-items: center;
-  margin-top: 8px; padding: 24px; background: var(--color-white);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
-}
+.make-catalog .pagination-container { display: flex; flex-direction: column; gap: 16px; align-items: center; margin-top: 8px; padding: 24px; background: var(--color-white); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
 .make-catalog .pagination-info { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 12px; }
 .make-catalog .results-count { font-size: 14px; color: var(--color-text-muted); font-weight: 500; }
 .make-catalog .page-size-selector { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--color-text-secondary); }
-.make-catalog .page-size-selector select {
-  height: 36px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm);
-  padding: 0 32px 0 12px; font-size: 14px; font-weight: 600; color: var(--color-text-main);
-  appearance: none; cursor: pointer; outline: none;
-  background: var(--color-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231A1B22' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center;
-}
+.make-catalog .page-size-selector select { height: 36px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); padding: 0 32px 0 12px; font-size: 14px; font-weight: 600; color: var(--color-text-main); appearance: none; cursor: pointer; outline: none; background: var(--color-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231A1B22' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center; }
 .make-catalog .pagination { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
-.make-catalog .pagination-btn {
-  min-width: 40px; height: 40px; padding: 0 12px; border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-sm); background: var(--color-white); font-size: 14px;
-  font-weight: 600; color: var(--color-text-main); cursor: pointer; transition: all .18s;
-  display: flex; align-items: center; justify-content: center;
-}
+.make-catalog .pagination-btn { min-width: 40px; height: 40px; padding: 0 12px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-white); font-size: 14px; font-weight: 600; color: var(--color-text-main); cursor: pointer; transition: all .18s; display: flex; align-items: center; justify-content: center; }
 .make-catalog .pagination-btn:hover:not(:disabled) { border-color: var(--color-primary); background: var(--color-primary-bg); }
 .make-catalog .pagination-btn.active { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-black); }
 .make-catalog .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; background: var(--color-bg-main); color: var(--color-text-muted); }
 .make-catalog .pagination-ellipsis { padding: 0 8px; color: var(--color-text-muted); align-self: center; font-weight: 600; }
 
 /* ================================================================
-   6. ПУСТЫЕ СОСТОЯНИЯ И СКЕЛЕТОНЫ
+   6. SKELETON LOADERS
 ================================================================ */
-.make-catalog .no-results, .make-catalog .loader { 
-  grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--color-text-muted); font-size: 16px; 
-}
-
-.make-catalog .skeleton-card {
-  background: var(--color-white); border-radius: var(--radius-lg); overflow: hidden;
-  box-shadow: var(--shadow-card); display: flex; flex-direction: column;
-}
-.make-catalog .skeleton-image {
-  aspect-ratio: 16 / 10;
-  background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%);
-  background-size: 200% 100%; animation: make-shimmer 1.6s infinite;
-}
+.make-catalog .skeleton-card { background: var(--color-white); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-card); display: flex; flex-direction: column; }
+.make-catalog .skeleton-image { aspect-ratio: 16 / 10; background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
 .make-catalog .skeleton-content { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-.make-catalog .skeleton-line {
-  height: 14px; border-radius: 5px;
-  background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%);
-  background-size: 200% 100%; animation: make-shimmer 1.6s infinite;
-}
+.make-catalog .skeleton-line { height: 14px; border-radius: 5px; background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
 .make-catalog .skeleton-line.title { height: 20px; width: 70%; }
 .make-catalog .skeleton-line.price { height: 24px; width: 40%; margin-top: auto; }
-.make-catalog .skeleton-btn {
-  height: 44px; border-radius: var(--radius-sm); margin-top: 14px;
-  background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%);
-  background-size: 200% 100%; animation: make-shimmer 1.6s infinite;
-}
+.make-catalog .skeleton-btn { height: 44px; border-radius: var(--radius-sm); margin-top: 14px; background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
 @keyframes make-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
 /* ================================================================
-   7. МОДАЛЬНОЕ ОКНО (SPLIT-SCREEN)
+   7. МОДАЛЬНОЕ ОКНО (PREMIUM DESKTOP UI)
 ================================================================ */
 .make-catalog .modal-overlay {
   position: fixed; inset: 0; background: rgba(10, 10, 40, 0.6); backdrop-filter: blur(8px);
@@ -294,76 +216,92 @@
 .make-catalog .modal-overlay.hidden { display: none !important; }
 
 .make-catalog .modal-box {
-  background: var(--color-white); border-radius: 24px; width: 100%; max-width: 1200px;
-  height: 88vh; max-height: 900px; overflow: hidden; position: relative;
-  display: flex; flex-direction: row; box-shadow: 0 24px 80px rgba(0,0,0,.2);
+  background: var(--color-white); border-radius: 24px; width: 100%; max-width: 1100px;
+  height: 85vh; max-height: 800px; overflow: hidden; position: relative;
+  display: flex; flex-direction: row; box-shadow: 0 24px 80px rgba(0,0,0,.15);
+  padding: 24px; gap: 32px; 
   transform: translateY(20px) scale(0.98); transition: transform .3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .make-catalog .modal-overlay.visible .modal-box { transform: translateY(0) scale(1); }
 
 .make-catalog .modal-close {
-  position: absolute; top: 20px; right: 24px; width: 44px; height: 44px;
+  position: absolute; top: 24px; right: 24px; width: 36px; height: 36px;
   background: var(--color-bg-main); border: none; border-radius: 50%;
-  font-size: 24px; color: var(--color-text-main); cursor: pointer;
+  font-size: 20px; color: var(--color-text-muted); cursor: pointer;
   display: flex; align-items: center; justify-content: center; z-index: 20; transition: background .2s;
 }
-.make-catalog .modal-close:hover { background: #E4E6F0; }
+.make-catalog .modal-close:hover { background: #E4E6F0; color: var(--color-text-main); }
 
-/* ---- ЛЕВАЯ ЧАСТЬ (ГАЛЕРЕЯ) ---- */
+/* ЛЕВАЯ ЧАСТЬ (ГАЛЕРЕЯ) */
 .make-catalog .modal-left { width: 55%; background: transparent; display: flex; flex-direction: column; gap: 12px; position: relative; }
 .make-catalog .modal-gallery { flex: 1; position: relative; width: 100%; overflow: hidden; border-radius: 16px; background: var(--color-bg-main); }
-.make-catalog .modal-gallery-track { display: flex; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth; scrollbar-width: none; }
+.make-catalog .modal-gallery-track {
+  display: flex; width: 100%; height: 100%; 
+  flex-direction: column; overflow-y: auto; overflow-x: hidden; /* ВЕРТИКАЛЬНЫЙ СКРОЛЛ */
+  scroll-snap-type: y mandatory; scroll-behavior: smooth; scrollbar-width: none;
+}
 .make-catalog .modal-gallery-track::-webkit-scrollbar { display: none; }
-.make-catalog .modal-gallery-track img {   flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; scroll-snap-align: center; }
+.make-catalog .modal-gallery-track img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; scroll-snap-align: center; }
 
-/* Кнопки навигации по фото - располагаем вертикально справа */
-.make-catalog .modal-nav-prev, .make-catalog .modal-nav-next { position: absolute; right: 16px; width: 44px; height: 44px; background: rgba(255, 255, 255, 0.95); border: none; border-radius: 50%;
-  cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .2s; box-shadow: 0 4px 12px rgba(0,0,0,.15); color: var(--color-text-main); z-index: 10; }
-.make-catalog .modal-nav-prev { bottom: 76px; } /* Кнопка ВВЕРХ */
-.make-catalog .modal-nav-next { bottom: 16px; } /* Кнопка ВНИЗ */
-
+/* Кнопки навигации по фото - вертикально справа */
+.make-catalog .modal-nav-prev, .make-catalog .modal-nav-next {
+  position: absolute; right: 16px; width: 44px; height: 44px;
+  background: rgba(255, 255, 255, 0.95); border: none; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; 
+  transition: transform .2s; box-shadow: 0 4px 12px rgba(0,0,0,.15); color: var(--color-text-main); z-index: 10;
+}
+.make-catalog .modal-nav-prev { bottom: 76px; } 
+.make-catalog .modal-nav-next { bottom: 16px; } 
 .make-catalog .modal-nav-prev:hover, .make-catalog .modal-nav-next:hover { transform: scale(1.08); background: #FFF; }
 
-.make-catalog .modal-counter { position: absolute; top: 16px; left: 16px; background: rgba(26,27,34,.7); color: #FFF; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; backdrop-filter: blur(4px); }
-
+.make-catalog .modal-counter {
+  position: absolute; top: 16px; left: 16px; background: rgba(26,27,34,.7); color: #FFF;
+  padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; backdrop-filter: blur(4px);
+}
 .make-catalog .modal-thumbs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .make-catalog .modal-thumbs::-webkit-scrollbar { display: none; }
-.make-catalog .modal-thumb { width: 72px; height: 54px; border-radius: 8px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color .2s; opacity: 0.6;}
+.make-catalog .modal-thumb { width: 72px; height: 54px; border-radius: 8px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color .2s; opacity: 0.6; }
 .make-catalog .modal-thumb:hover { opacity: 1; }
 .make-catalog .modal-thumb.is-active { border-color: var(--color-text-main); opacity: 1; }
 .make-catalog .modal-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-/* Правая часть модалки (Инфо) */
-.make-catalog .modal-right { width: 45%; overflow-y: auto; padding: 40px 40px 100px; position: relative; display: flex; flex-direction: column; scrollbar-width: thin; }
-.make-catalog .modal-status { font-size: 13px; color: #4CAF50; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; text-transform: uppercase; }
-.make-catalog .status-dot { width: 8px; height: 8px; background: #4CAF50; border-radius: 50%; }
-.make-catalog .modal-title { font-family: var(--font-d); font-size: 32px; font-weight: 800; line-height: 1.1; margin-bottom: 16px; }
-.make-catalog .modal-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-.make-catalog .modal-pills .ctag { background: var(--color-bg-main); font-size: 13px; padding: 6px 12px; }
+/* ПРАВАЯ ЧАСТЬ (ИНФО) */
+.make-catalog .modal-right {
+  width: 45%; overflow-y: auto; padding: 0 16px 100px 0; position: relative;
+  display: flex; flex-direction: column; scrollbar-width: none;
+}
+.make-catalog .modal-right::-webkit-scrollbar { display: none; }
 
-.make-catalog .modal-price-block { margin-bottom: 24px; }
+.make-catalog .modal-status { font-size: 11px; color: #00B35A; font-weight: 800; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.make-catalog .status-dot { width: 6px; height: 6px; background: #00B35A; border-radius: 50%; }
+.make-catalog .modal-title { font-family: var(--font-d); font-size: 32px; font-weight: 800; line-height: 1.2; margin-bottom: 16px; color: var(--color-text-main); }
+.make-catalog .modal-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.make-catalog .modal-pills .ctag { background: var(--color-bg-main); font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 6px; color: var(--color-text-main); }
+
+.make-catalog .modal-price-block { margin-bottom: 32px; }
 .make-catalog .modal-price { font-family: var(--font-d); font-size: 36px; font-weight: 800; color: var(--color-text-main); }
 
-.make-catalog .modal-credit-block { background: var(--color-primary-bg); border-radius: var(--radius-sm); padding: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 32px; border-left: 4px solid var(--color-primary); }
-.make-catalog .modal-credit-label { font-size: 12px; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase; margin-bottom: 4px; }
-.make-catalog .modal-credit-value { font-family: var(--font-d); font-size: 18px; font-weight: 700; color: var(--color-text-main); }
-.make-catalog .modal-calc-btn { padding: 10px 20px; background: var(--color-white); border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow-sm); }
+/* Кредитный блок */
+.make-catalog .modal-credit-block { background: #FFF9E6; border-radius: 12px; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 32px; border: none; }
+.make-catalog .modal-credit-label { font-size: 11px; font-weight: 800; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: 4px; }
+.make-catalog .modal-credit-value { font-family: var(--font-d); font-size: 15px; font-weight: 800; color: var(--color-text-main); }
+.make-catalog .modal-calc-btn { padding: 10px 16px; background: var(--color-white); border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.05); color: var(--color-text-main); }
 
-.make-catalog .modal-section-title { font-family: var(--font-d); font-size: 20px; font-weight: 800; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--color-bg-main); }
-.make-catalog .modal-specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+.make-catalog .modal-section-title { font-family: var(--font-d); font-size: 18px; font-weight: 800; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--color-border); color: var(--color-text-main); }
+.make-catalog .modal-specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 16px; margin-bottom: 40px; }
 .make-catalog .modal-spec-tile { display: flex; flex-direction: column; gap: 4px; }
 .make-catalog .modal-spec-label { font-size: 12px; color: var(--color-text-muted); }
-.make-catalog .modal-spec-value { font-size: 15px; font-weight: 600; color: var(--color-text-main); }
-.make-catalog .modal-description { font-size: 15px; line-height: 1.6; color: var(--color-text-secondary); white-space: pre-wrap; }
+.make-catalog .modal-spec-value { font-size: 14px; font-weight: 800; color: var(--color-text-main); }
+.make-catalog .modal-description { font-size: 14px; line-height: 1.6; color: var(--color-text-secondary); white-space: pre-wrap; padding-bottom: 40px;}
 
-.make-catalog .modal-action-bar { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); padding: 20px 40px; display: flex; gap: 12px; border-top: 1px solid var(--color-border); z-index: 10; }
-.make-catalog .modal-apply-btn { flex: 1; height: 52px; background: var(--color-text-main); color: var(--color-white); border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 700; cursor: pointer; transition: background .2s; }
-.make-catalog .modal-apply-btn:hover { background: var(--color-black); }
-.make-catalog .modal-phone-btn { width: 52px; height: 52px; border: 2px solid var(--color-border); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--color-text-main); transition: all .2s; }
+.make-catalog .modal-action-bar { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); padding: 20px 0; display: flex; gap: 12px; border-top: 1px solid var(--color-border); z-index: 10; }
+.make-catalog .modal-apply-btn { flex: 1; height: 52px; background: var(--color-text-main); color: var(--color-white); border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background .2s; }
+.make-catalog .modal-apply-btn:hover { background: #000; }
+.make-catalog .modal-phone-btn { width: 52px; height: 52px; border: 1.5px solid var(--color-border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--color-text-main); transition: all .2s; }
 .make-catalog .modal-phone-btn:hover { border-color: var(--color-text-main); background: var(--color-bg-main); }
 
 /* ================================================================
-   8. АДАПТИВ (MOBILE) И ВЫДВИЖНАЯ ШТОРКА
+   8. АДАПТИВ (MOBILE)
 ================================================================ */
 @media (max-width: 1140px) {
   .make-catalog[data-filter-layout="vertical"] .catalog-wrap { grid-template-columns: 240px 1fr; padding: 20px 24px; }
@@ -376,21 +314,22 @@
   .make-catalog .sidebar { display: none; }
   .make-catalog .toolbar { display: flex; }
   
+  /* МОБИЛЬНОЕ МОДАЛЬНОЕ ОКНО */
   .make-catalog .modal-overlay { padding: 0; align-items: flex-end; }
-  .make-catalog .modal-box { flex-direction: column; height: 95vh; border-radius: 20px 20px 0 0; }
-  .make-catalog .modal-left { width: 100%; flex: 0 0 auto; }
-  .make-catalog .modal-gallery { height: 35vh; min-height: 250px; }
-  /* В мобильной версии возвращаем ГОРИЗОНТАЛЬНЫЙ свайп */
-  .make-catalog .modal-gallery-track { flex-direction: row; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; }
+  .make-catalog .modal-box { flex-direction: column; height: 95vh; border-radius: 20px 20px 0 0; padding: 0; gap: 0; }
+  .make-catalog .modal-left { width: 100%; flex: 0 0 auto; gap: 0; padding: 0; }
+  .make-catalog .modal-gallery { height: 35vh; min-height: 250px; border-radius: 20px 20px 0 0; }
   
+  /* Горизонтальный свайп для мобильных */
+  .make-catalog .modal-gallery-track { flex-direction: row; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; }
   .make-catalog .modal-nav-prev, .make-catalog .modal-nav-next { top: 50%; bottom: auto; transform: translateY(-50%); width: 40px; height: 40px; }
   .make-catalog .modal-nav-prev { left: 12px; right: auto; }
   .make-catalog .modal-nav-next { right: 12px; }
   .make-catalog .modal-nav-prev:hover, .make-catalog .modal-nav-next:hover { transform: translateY(-50%) scale(1.05); }
   .make-catalog .modal-nav-prev svg { transform: rotate(-90deg); }
   .make-catalog .modal-nav-next svg { transform: rotate(-90deg); }
-  
-  .make-catalog .modal-counter { top: auto; bottom: 16px; right: 16px; left: auto; } /* Возвращаем счетчик в угол */
+  .make-catalog .modal-counter { top: auto; bottom: 16px; right: 16px; left: auto; }
+
   .make-catalog .modal-thumbs { display: none; } 
   .make-catalog .modal-right { width: 100%; padding: 24px 20px 100px; flex: 1; }
   .make-catalog .modal-close { top: 12px; right: 12px; width: 36px; height: 36px; background: rgba(0,0,0,0.5); color: #FFF; }
@@ -404,7 +343,7 @@
   .make-catalog .modal-specs-grid { grid-template-columns: 1fr; gap: 12px; }
 }
 
-/* Мобильная шторка фильтров (Drawer) */
+/* МОБИЛЬНАЯ ШТОРКА (DRAWER) С УМНОЙ СЕТКОЙ */
 .make-catalog .mob-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 300; backdrop-filter: blur(2px); }
 .make-catalog .mob-overlay.is-open { display: block; }
 .make-catalog .mob-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: min(320px, 90vw); background: var(--color-white); z-index: 301; transform: translateX(-100%); transition: transform .3s; display: flex; flex-direction: column; }
@@ -413,21 +352,14 @@
 .make-catalog .drawer-title { font-family: var(--font-d); font-size: 18px; font-weight: 800; }
 .make-catalog .btn-close { font-size: 24px; background: none; border: none; cursor: pointer; color: var(--color-text-muted); }
 .make-catalog .drawer-body { padding: 20px; overflow-y: auto; flex: 1; }
-/* Делаем сетку в 2 столбца для мобильной шторки */
-.make-catalog .drawer-body #filters-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px; align-items: end; }
 
-/* Фильтры От/До, Тогглы и Сортировка занимают всю ширину (оба столбца) */
+/* 2 колонки для мобильных фильтров */
+.make-catalog .drawer-body #filters-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px; align-items: end; }
 .make-catalog .drawer-body .filter-group:has(.minmax-row),
 .make-catalog .drawer-body .filter-group:has(.toggle-row),
-.make-catalog .drawer-body .filter-group.sort-group {
-  grid-column: 1 / -1;
-}
+.make-catalog .drawer-body .filter-group.sort-group { grid-column: 1 / -1; }
 
 /* ================================================================
    9. СОКРАЩЕННЫЙ ВИДЖЕТ (RANDOM BLOCK)
 ================================================================ */
-.make-catalog[data-make-catalog="random"] .make-random-wrap { 
-  max-width: 1440px; 
-  margin: 0 auto; 
-  padding: 24px 40px; 
-}
+.make-catalog[data-make-catalog="random"] .make-random-wrap { max-width: 1440px; margin: 0 auto; padding: 24px 40px; }

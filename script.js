@@ -53,10 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let cars = [];
     let filteredCars = [];
     let lastLeadCar = null;
-    
     const filterInstances = { multiselects: {} };
     
-    // ИСПРАВЛЕНИЕ: Количество машин по умолчанию, чтобы было видно пагинацию
     let currentPage = 1;
     let pageSize = parseInt(document.getElementById('page-size')?.value) || 16; 
     let lazyObserver = null;
@@ -225,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const urlManager = new URLManager();
 
-    // ========== МОДАЛЬНОЕ ОКНО С FOCUS TRAP ==========
+    // ========== МОДАЛЬНОЕ ОКНО ==========
     class CarDetailModal {
         constructor() {
             this.isOpen = false;
@@ -245,7 +243,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             this.track.addEventListener('scroll', debounce(() => {
                 if (!this.imagesCount) return;
-                const idx = Math.round(this.track.scrollLeft / this.track.clientWidth);
+                // Адаптивное определение оси скролла
+                const isVertical = window.innerWidth > 900;
+                const idx = isVertical 
+                    ? Math.round(this.track.scrollTop / this.track.clientHeight)
+                    : Math.round(this.track.scrollLeft / this.track.clientWidth);
+                    
                 this.counterEl.textContent = `${idx + 1} / ${this.imagesCount}`;
                 const thumbs = this.overlay.querySelectorAll('.modal-thumb');
                 thumbs.forEach((t, i) => t.classList.toggle('is-active', i === idx));
@@ -259,13 +262,13 @@ document.addEventListener('DOMContentLoaded', () => {
         handleKeyDown(e) {
             if (!this.isOpen) return;
             if (e.key === 'Escape') { this.close(); return; }
-            if (e.key === 'ArrowRight') this.nextImage();
-            if (e.key === 'ArrowLeft') this.prevImage();
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); this.nextImage(); }
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); this.prevImage(); }
 
+            // Ловушка фокуса
             if (e.key === 'Tab') {
                 const focusableElements = this.overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
                 if (!focusableElements.length) return;
-
                 const firstElement = focusableElements[0];
                 const lastElement = focusableElements[focusableElements.length - 1];
 
@@ -373,13 +376,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 thumb.className = `modal-thumb ${idx === 0 ? 'is-active' : ''}`;
                 thumb.innerHTML = `<img src="${escapeHtml(src)}" alt="">`;
                 thumb.addEventListener('click', () => {
-                    this.track.scrollTo({ left: this.track.clientWidth * idx, behavior: 'smooth' });
+                    const isVertical = window.innerWidth > 900;
+                    if (isVertical) {
+                        this.track.scrollTo({ top: this.track.clientHeight * idx, behavior: 'smooth' });
+                    } else {
+                        this.track.scrollTo({ left: this.track.clientWidth * idx, behavior: 'smooth' });
+                    }
                 });
                 thumbsContainer.appendChild(thumb);
             });
         }
-        prevImage() { this.track.scrollBy({ left: -this.track.clientWidth, behavior: 'smooth' }); }
-        nextImage() { this.track.scrollBy({ left: this.track.clientWidth, behavior: 'smooth' }); }
+        prevImage() { 
+            const isVertical = window.innerWidth > 900;
+            if (isVertical) {
+                this.track.scrollBy({ top: -this.track.clientHeight, behavior: 'smooth' });
+            } else {
+                this.track.scrollBy({ left: -this.track.clientWidth, behavior: 'smooth' });
+            }
+        }
+        nextImage() { 
+            const isVertical = window.innerWidth > 900;
+            if (isVertical) {
+                this.track.scrollBy({ top: this.track.clientHeight, behavior: 'smooth' });
+            } else {
+                this.track.scrollBy({ left: this.track.clientWidth, behavior: 'smooth' });
+            }
+        }
     }
     const carDetailModal = new CarDetailModal();
 
@@ -446,7 +468,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========== ДИНАМИЧЕСКИЙ РЕНДЕР И ФИЛЬТРАЦИЯ ==========
-
     function renderFilters() {
         const container = document.getElementById('filters-container');
         if (!container) return;
@@ -491,7 +512,6 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = html;
     }
 
-    // ИСПРАВЛЕНИЕ: Интеллектуальная блокировка зависимых полей (Каскадность + UX)
     function updateDependencies() {
         APP_CONFIG.filters.forEach(f => {
             if (!f.enabled || !f.dependsOn) return;
@@ -500,7 +520,6 @@ document.addEventListener('DOMContentLoaded', () => {
             let parentVals = [];
             const parentF = APP_CONFIG.filters.find(x => x.key === parentKey);
             
-            // Получаем актуальные значения родителя
             if (parentF) {
                 if (parentF.type === 'multiselect') {
                     parentVals = filterInstances.multiselects[parentKey]?.getSelectedValues() || [];
@@ -512,7 +531,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const isParentSelected = parentVals.length > 0;
 
-            // Блокируем или Разблокируем дочерний элемент (UX)
             if (f.type === 'select') {
                 const el = document.getElementById(`sel-${f.key}`);
                 if (el) el.disabled = !isParentSelected;
@@ -523,7 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Если родитель не выбран - очищаем дочерний элемент и прерываем обработку
             if (!isParentSelected) {
                 if (f.type === 'select') {
                     const el = document.getElementById(`sel-${f.key}`);
@@ -540,10 +557,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         ms.renderSelected();
                     }
                 }
-                return; // Прерываемся, чтобы не строить список из всех машин
+                return;
             }
             
-            // Если родитель выбран - высчитываем доступные дочерние опции
             let validCars = cars;
             let currentFilter = f;
             
@@ -745,11 +761,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalPages = Math.ceil(filteredCars.length / pageSize);
         
         if (totalPages <= 1) {
-            FDOM.pagination.style.display = 'none'; // Скрывает блок, если страниц мало
+            FDOM.pagination.style.display = 'none';
             return;
         }
         
-        FDOM.pagination.style.display = 'flex'; // Показывает, если нужно
+        FDOM.pagination.style.display = 'flex';
         let html = '';
         
         html += `<button class="pagination-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>Назад</button>`;
@@ -821,7 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
-        applyFilters(); // Каскадная очистка сработает внутри applyFilters
+        applyFilters();
         closeDrawer();
     });
 
@@ -867,9 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!list.length) { container.innerHTML = `<div class="no-results">Ничего не найдено</div>`; return; }
         container.innerHTML = list.map(car => createCardHTML(car)).join('');
         
-        if (lazyObserver) {
-            lazyObserver.disconnect();
-        }
+        if (lazyObserver) lazyObserver.disconnect();
         
         lazyObserver = new IntersectionObserver((entries, obs) => {
             entries.forEach(entry => {
