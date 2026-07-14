@@ -1,3 +1,4 @@
+<style>
 /* ================================================================
    1. ПЕРЕМЕННЫЕ И БАЗОВЫЕ СТИЛИ
 ================================================================ */
@@ -62,7 +63,7 @@
 .make-catalog[data-filter-layout="vertical"] .sidebar {
   background: var(--color-white); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card); padding: 24px;
-  position: sticky; top: calc(var(--header-h) + 16px);
+  position: sticky; 
 }
 .make-catalog[data-filter-layout="vertical"] .sidebar-foot {
   display: flex; flex-direction: column; gap: 12px; margin-top: 24px;
@@ -163,7 +164,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
   flex-wrap: wrap;
   gap: 16px;
 }
@@ -370,7 +370,7 @@
   .make-catalog .sidebar { display: none; }
   
   /* Топ-бар мобильной версии */
-  .make-catalog .catalog-top-bar { margin-bottom: 16px; gap: 12px; }
+  .make-catalog .catalog-top-bar { margin-bottom: 10px; gap: 12px; }
   .make-catalog .btn-mob-filter { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-white); font-size: 13px; font-weight: 600; cursor: pointer; }
   
   /* МОБИЛЬНОЕ МОДАЛЬНОЕ ОКНО */
@@ -438,3 +438,5 @@
    10. СОКРАЩЕННЫЙ ВИДЖЕТ (RANDOM BLOCK)
 ================================================================ */
 .make-catalog[data-make-catalog="random"] .make-random-wrap { max-width: 1440px; margin: 0 auto; padding: 24px 40px; }
+
+</style>

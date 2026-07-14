@@ -1,3 +1,4 @@
+<script>
 document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // КОНФИГУРАЦИЯ КАТАЛОГА
@@ -524,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (f.type === 'toggle') {
                 html += `<div class="toggle-row" id="tog-${f.key}" data-key="${f.key}"></div>`;
             }
-            html += `</div><div class="f-sep"></div>`;
+            html += `</div>`;
         });
         
         container.innerHTML = html;
@@ -1097,3 +1098,4 @@ document.addEventListener('DOMContentLoaded', () => {
     
     loadCarsData();
 });
+</script>
