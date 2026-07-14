@@ -234,8 +234,9 @@
    6. ПАГИНАЦИЯ
 ================================================================ */
 .make-catalog .pagination-container { display: flex; flex-direction: column; gap: 16px; align-items: center; margin-top: 8px; padding: 24px; background: var(--color-white); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
-.make-catalog .pagination-info { display: flex; justify-content: flex-end; align-items: center; width: 100%; }
-.make-catalog .page-size-selector { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--color-text-secondary); }
+.make-catalog .pagination-info { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.make-catalog .results-count { font-size: 14px; color: var(--color-text-muted); font-weight: 500; order: 2; }
+.make-catalog .page-size-selector { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--color-text-secondary); order: 1; }
 .make-catalog .page-size-selector select { height: 36px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); padding: 0 32px 0 12px; font-size: 14px; font-weight: 600; color: var(--color-text-main); appearance: none; cursor: pointer; outline: none; background: var(--color-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231A1B22' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center; }
 .make-catalog .pagination { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
 .make-catalog .pagination-btn { min-width: 40px; height: 40px; padding: 0 12px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-white); font-size: 14px; font-weight: 600; color: var(--color-text-main); cursor: pointer; transition: all .18s; display: flex; align-items: center; justify-content: center; }
@@ -276,7 +277,7 @@
 }
 .make-catalog .modal-overlay.visible .modal-box { transform: translateY(0) scale(1); }
 
-/* Идеально ровные кнопки модалки */
+/* кнопки модалки */
 .make-catalog .modal-close {
   position: absolute; top: 24px; right: 24px; width: 36px; height: 36px;
   background: var(--color-bg-main); border: none; border-radius: 50%;
@@ -297,7 +298,7 @@
 .make-catalog .modal-gallery-track::-webkit-scrollbar { display: none; }
 .make-catalog .modal-gallery-track img { flex: 0 0 auto; width: 100%; height: auto; object-fit: cover; border-radius: 12px; }
 
-/* Кнопки навигации по фото - вертикально справа */
+/* Кнопки навигации по фото */
 .make-catalog .modal-nav-prev, .make-catalog .modal-nav-next {
   position: absolute; right: 16px; width: 44px; height: 44px;
   background: rgba(255, 255, 255, 0.95); border: none; border-radius: 50%;

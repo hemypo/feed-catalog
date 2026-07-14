@@ -789,6 +789,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const start = (currentPage - 1) * pageSize;
         const paginatedCars = filteredCars.slice(start, start + pageSize);
         renderCards(paginatedCars, FDOM.cardsContainer);
+
+        // ОБНОВЛЕНО: Высчитываем текущий предел и выводим формат "48 из 64"
+        const bottomCountEl = document.getElementById('results-count');
+        if (bottomCountEl) {
+            // Берем минимальное значение: либо текущая страница * лимит, либо общее количество
+            const currentShowing = Math.min(currentPage * pageSize, filteredCars.length);
+            bottomCountEl.textContent = `${currentShowing} из ${filteredCars.length}`;
+        }
     }
 
     function renderPagination() {
@@ -989,8 +997,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (jsonData && jsonData.data) {
-            cars = Object.entries(jsonData.data).map(([id, data]) => ({
+        const payload = Array.isArray(jsonData) ? jsonData[0] : jsonData;
+
+                if (payload && payload.data) {
+                    cars = Object.entries(payload.data).map(([id, data]) => ({
                 id: id,
                 mark_id: `${data.mark || ''} ${data.model || ''}`.trim(),
                 original_mark_id: data.mark || '',
