@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ],
         cacheName: 'make_catalog_cache',
         cacheTTL: 25 * 60 * 1000, 
-        autoLayoutThreshold: 5, // <--- Умный порог адаптивности: если включено больше 5 фильтров, сетка станет горизонтальной
+        autoLayoutThreshold: 5, // Умный порог: если включено > 5 фильтров, панель станет горизонтальной на ПК
         
         filters: [
             { key: 'original_mark_id', type: 'select', label: 'Марка',           enabled: true },
@@ -73,7 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatNum(n) { return Number(n).toLocaleString('ru-RU'); }
     function debounce(func, wait) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func(...args), wait); }; }
     
-    // Функция склонения слов (1 автомобиль, 2 автомобиля, 5 автомобилей)
     function getDeclension(number, words) {
         const value = Math.abs(number) % 100; 
         const num = value % 10;
@@ -347,7 +346,26 @@ document.addEventListener('DOMContentLoaded', () => {
             ).join('');
 
             this.overlay.querySelector('#modalTitle').textContent = car.mark_id;
-            this.overlay.querySelector('#modalPrice').textContent = car.price ? `${formatNum(car.price)} ₽` : 'Цена по запросу';
+            
+            // ВНЕДРЕНИЕ СКИДОК ИЗ ФИДА: Выводим старую цену и шильдик выгоды
+            const priceContainer = this.overlay.querySelector('.modal-price-block');
+            if (priceContainer) {
+                if (car.price) {
+                    if (car.max_discount > 0) {
+                        priceContainer.innerHTML = `
+                            <div class="modal-price-row">
+                                <span class="modal-price">${formatNum(car.price - car.max_discount)} ₽</span>
+                                <span class="modal-price-old">${formatNum(car.price)} ₽</span>
+                            </div>
+                            <div class="modal-discount-badge">Выгода до ${formatNum(car.max_discount)} ₽</div>
+                        `;
+                    } else {
+                        priceContainer.innerHTML = `<span class="modal-price">${formatNum(car.price)} ₽</span>`;
+                    }
+                } else {
+                    priceContainer.innerHTML = `<span class="modal-price">Цена по запросу</span>`;
+                }
+            }
             
             const descBlock = this.overlay.querySelector('#modalDescBlock');
             if (car.description) {
@@ -505,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('filters-container');
         if (!container) return;
 
-        // SMART LAYOUT: Умное переключение сетки в зависимости от кол-ва включенных фильтров
+        // SMART LAYOUT: Динамическое переключение сетки на основе конфига из репозитория
         const catalogRoot = document.querySelector('.make-catalog');
         if (catalogRoot) {
             const enabledFiltersCount = APP_CONFIG.filters.filter(f => f.enabled).length;
@@ -673,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (maxEl) { maxEl.innerHTML += optsHtml; maxEl.addEventListener('change', applyFilters); }
                 }
             } else if (f.type === 'toggle') {
-                const tog = document.getElementById(`tog-${f.key}`);
+                const tog = document.getElementById('tog-' + f.key);
                 if (tog) {
                     const uniqueVals = getUnique(f.key);
                     let btnsHtml = `<button type="button" class="toggle-opt is-active" data-val="all">Все</button>`;
@@ -764,8 +782,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         });
 
-        if (sortBy === 'price-asc') filteredCars.sort((a, b) => a.price - b.price);
-        if (sortBy === 'price-desc') filteredCars.sort((a, b) => b.price - a.price);
+        if (sortBy === 'price-asc') filteredCars.sort((a, b) => (a.price - a.max_discount) - (b.price - b.max_discount));
+        if (sortBy === 'price-desc') filteredCars.sort((a, b) => (b.price - b.max_discount) - (a.price - a.max_discount));
         if (sortBy === 'year-desc') filteredCars.sort((a, b) => b.year - a.year);
         if (sortBy === 'year-asc') filteredCars.sort((a, b) => a.year - b.year);
         if (sortBy === 'run-asc') filteredCars.sort((a, b) => a.run - b.run);
@@ -790,10 +808,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const paginatedCars = filteredCars.slice(start, start + pageSize);
         renderCards(paginatedCars, FDOM.cardsContainer);
 
-        // ОБНОВЛЕНО: Высчитываем текущий предел и выводим формат "48 из 64"
         const bottomCountEl = document.getElementById('results-count');
         if (bottomCountEl) {
-            // Берем минимальное значение: либо текущая страница * лимит, либо общее количество
             const currentShowing = Math.min(currentPage * pageSize, filteredCars.length);
             bottomCountEl.textContent = `${currentShowing} из ${filteredCars.length}`;
         }
@@ -897,6 +913,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function createCardHTML(car) {
         const imgSrc = (Array.isArray(car.images) && car.images.length) ? car.images[0] : PLACEHOLDER_IMG;
         const hasCarousel = car.images && car.images.length > 1;
+        const currentPrice = car.price - car.max_discount;
         
         return `
             <div class="car-card product-card" data-id="${escapeHtml(car.id)}">
@@ -913,7 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${car.gearbox ? `<span class="ctag spec-value">${escapeHtml(car.gearbox)}</span>` : ''}
                     </div>
                     <div class="card-pricing card-price">
-                        <span class="price-main price-new">${car.price ? escapeHtml(formatNum(car.price)) + ' ₽' : 'Цена по запросу'}</span>
+                        <span class="price-main price-new">${car.price ? escapeHtml(formatNum(currentPrice)) + ' ₽' : 'Цена по запросу'}</span>
                     </div>
                     <div class="card-btns card-buttons">
                         <a href="#popup:model" class="card-btn btn-outline" data-car-title="${escapeHtml(car.mark_id)}">Оставить заявку</a>
@@ -999,14 +1016,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const payload = Array.isArray(jsonData) ? jsonData[0] : jsonData;
 
-                if (payload && payload.data) {
-                    cars = Object.entries(payload.data).map(([id, data]) => ({
+        if (payload && payload.data) {
+            cars = Object.entries(payload.data).map(([id, data]) => ({
                 id: id,
                 mark_id: `${data.mark || ''} ${data.model || ''}`.trim(),
                 original_mark_id: data.mark || '',
                 model: data.model || '',
                 year: data.year,
                 price: parseInt(data.price) || 0,
+                max_discount: parseInt(data.max_discount) || 0, // Поддержка скидки из фида
                 run: parseInt(data.run) || 0,
                 gearbox: data.gearbox,
                 drive: data.drive,
