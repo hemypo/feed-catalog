@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
         filters: [
             { key: 'original_mark_id', type: 'select', label: 'Марка',           enabled: true },
             { key: 'model',            type: 'select', label: 'Модель',          enabled: true, dependsOn: 'original_mark_id' },
-            { key: 'generation',       type: 'select', label: 'Поколение',       enabled: true, dependsOn: 'model' },
+            { key: 'generation',       type: 'select', label: 'Поколение',       enabled: false, dependsOn: 'model' },
             { key: 'price',            type: 'minmax', label: 'Стоимость, ₽',    enabled: true, step: 100000 },
             { key: 'year',             type: 'minmax', label: 'Год выпуска',     enabled: true, step: 1 },
             { key: 'run',              type: 'minmax', label: 'Пробег, км',      enabled: true, step: 10000 },
@@ -21,9 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'gearbox',          type: 'select', label: 'Коробка передач', enabled: true },
             { key: 'engine_type',      type: 'select', label: 'Двигатель',       enabled: true },
             { key: 'engine_volume',    type: 'minmax', label: 'Объем, л',        enabled: true, step: 0.5},
-            { key: 'drive',            type: 'toggle', label: 'Тип привода',     enabled: true },
+            { key: 'drive',            type: 'select', label: 'Тип привода',     enabled: true },
             { key: 'color',            type: 'select', label: 'Цвет кузова',     enabled: true },
-            { key: 'pts',              type: 'toggle', label: 'ПТС',             enabled: true },
+            { key: 'pts',              type: 'select', label: 'ПТС',             enabled: true },
             { key: 'owners_number',    type: 'select', label: 'Владельцев',      enabled: true },
             { key: 'wheel',            type: 'toggle', label: 'Руль',            enabled: true },
             { key: 'salon',            type: 'select', label: 'Автосалон',       enabled: false }
@@ -70,6 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function formatNum(n) { return Number(n).toLocaleString('ru-RU'); }
     function debounce(func, wait) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func(...args), wait); }; }
+    
+    // Функция склонения слов (1 автомобиль, 2 автомобиля, 5 автомобилей)
+    function getDeclension(number, words) {
+        const value = Math.abs(number) % 100; 
+        const num = value % 10;
+        if(value > 10 && value < 20) return words[2]; 
+        if(num > 1 && num < 5) return words[1];
+        if(num == 1) return words[0]; 
+        return words[2];
+    }
 
     let scrollbarWidth = null;
     function getScrollbarWidth() {
@@ -243,13 +253,25 @@ document.addEventListener('DOMContentLoaded', () => {
             
             this.track.addEventListener('scroll', debounce(() => {
                 if (!this.imagesCount) return;
-                // Адаптивное определение оси скролла
                 const isVertical = window.innerWidth > 900;
-                const idx = isVertical 
-                    ? Math.round(this.track.scrollTop / this.track.clientHeight)
-                    : Math.round(this.track.scrollLeft / this.track.clientWidth);
-                    
+                let idx = 0;
+                
+                if (isVertical) {
+                    const imgs = Array.from(this.track.querySelectorAll('img'));
+                    const trackCenter = this.track.scrollTop + (this.track.clientHeight / 2);
+                    let minDiff = Infinity;
+                    imgs.forEach((img, i) => {
+                        const imgCenter = img.offsetTop + (img.offsetHeight / 2);
+                        const diff = Math.abs(trackCenter - imgCenter);
+                        if (diff < minDiff) { minDiff = diff; idx = i; }
+                    });
+                } else {
+                    idx = Math.round(this.track.scrollLeft / this.track.clientWidth);
+                }
+                
+                idx = Math.max(0, Math.min(idx, this.imagesCount - 1));
                 this.counterEl.textContent = `${idx + 1} / ${this.imagesCount}`;
+                
                 const thumbs = this.overlay.querySelectorAll('.modal-thumb');
                 thumbs.forEach((t, i) => t.classList.toggle('is-active', i === idx));
             }, 50));
@@ -265,7 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); this.nextImage(); }
             if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); this.prevImage(); }
 
-            // Ловушка фокуса
             if (e.key === 'Tab') {
                 const focusableElements = this.overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
                 if (!focusableElements.length) return;
@@ -378,7 +399,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 thumb.addEventListener('click', () => {
                     const isVertical = window.innerWidth > 900;
                     if (isVertical) {
-                        this.track.scrollTo({ top: this.track.clientHeight * idx, behavior: 'smooth' });
+                        const targetImg = this.track.querySelectorAll('img')[idx];
+                        if (targetImg) this.track.scrollTo({ top: targetImg.offsetTop, behavior: 'smooth' });
                     } else {
                         this.track.scrollTo({ left: this.track.clientWidth * idx, behavior: 'smooth' });
                     }
@@ -389,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
         prevImage() { 
             const isVertical = window.innerWidth > 900;
             if (isVertical) {
-                this.track.scrollBy({ top: -this.track.clientHeight, behavior: 'smooth' });
+                this.track.scrollBy({ top: -500, behavior: 'smooth' });
             } else {
                 this.track.scrollBy({ left: -this.track.clientWidth, behavior: 'smooth' });
             }
@@ -397,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
         nextImage() { 
             const isVertical = window.innerWidth > 900;
             if (isVertical) {
-                this.track.scrollBy({ top: this.track.clientHeight, behavior: 'smooth' });
+                this.track.scrollBy({ top: 500, behavior: 'smooth' });
             } else {
                 this.track.scrollBy({ left: this.track.clientWidth, behavior: 'smooth' });
             }
@@ -495,20 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
             html += `</div><div class="f-sep"></div>`;
         });
         
-        html += `
-        <div class="filter-group sort-group">
-            <label class="filter-label">Сортировка</label>
-            <select class="f-select" id="sort-select">
-                <option value="default">По умолчанию</option>
-                <option value="price-asc">Сначала дешевле</option>
-                <option value="price-desc">Сначала дороже</option>
-                <option value="year-desc">Сначала новые</option>
-                <option value="year-asc">Сначала старые</option>
-                <option value="run-asc">Меньше пробег</option>
-                <option value="run-desc">Больше пробег</option>
-            </select>
-        </div>`;
-        
+        // Удален блок генерации сортировки отсюда (теперь он в index.html)
         container.innerHTML = html;
     }
 
@@ -678,7 +687,10 @@ document.addEventListener('DOMContentLoaded', () => {
             currentPage = parseInt(btn.dataset.page);
             renderPagination();
             renderCardsPage();
-            document.querySelector('.toolbar')?.scrollIntoView({ behavior: 'smooth' });
+            
+            // Плавный скролл к началу каталога
+            const topBar = document.querySelector('.catalog-top-bar');
+            if (topBar) topBar.scrollIntoView({ behavior: 'smooth' });
         });
 
         urlManager.loadFiltersFromUrl();
@@ -740,6 +752,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         urlManager.syncFiltersToUrl();
         
+        // ОБНОВЛЕНИЕ: Динамический текст количества машин с правильным склонением
+        const topCountEl = document.getElementById('catalog-results-count');
+        if (topCountEl) {
+            const word = getDeclension(filteredCars.length, ['автомобиль', 'автомобиля', 'автомобилей']);
+            topCountEl.textContent = `Найдено ${formatNum(filteredCars.length)} ${word}`;
+        }
+        
         currentPage = 1;
         renderPagination();
         renderCardsPage();
@@ -750,9 +769,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const start = (currentPage - 1) * pageSize;
         const paginatedCars = filteredCars.slice(start, start + pageSize);
         renderCards(paginatedCars, FDOM.cardsContainer);
-        
-        const countEl = document.getElementById('results-count');
-        if (countEl) countEl.textContent = `Показано: ${paginatedCars.length} из ${filteredCars.length} автомобилей`;
     }
 
     function renderPagination() {
@@ -859,7 +875,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card-img-wrap image-container">
                     <img data-src="${escapeHtml(imgSrc)}" alt="${escapeHtml(car.mark_id)}" loading="lazy" class="lazy-image" data-idx="0">
                     <div class="img-badges"><span class="badge-stock">В наличии</span></div>
-                    ${hasCarousel ? `<button class="carousel-button prev">&#10094;</button><button class="carousel-button next">&#10095;</button>` : ''}
+                    ${hasCarousel ? `<button class="carousel-button prev" aria-label="Назад"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="carousel-button next" aria-label="Вперед"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></button>` : ''}
                 </div>
                 <div class="card-body card-content">
                     <h3 class="card-name card-title">${escapeHtml(car.mark_id)}</h3>
