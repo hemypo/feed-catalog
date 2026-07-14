@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ],
         cacheName: 'make_catalog_cache',
         cacheTTL: 25 * 60 * 1000, 
+        autoLayoutThreshold: 5, // <--- Умный порог адаптивности: если включено больше 5 фильтров, сетка станет горизонтальной
         
         filters: [
             { key: 'original_mark_id', type: 'select', label: 'Марка',           enabled: true },
@@ -250,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.overlay) return;
 
             // ФИКС position: fixed ДЛЯ TILDA
-            // Вырываем модалку из Tilda и кладем в самый корень <body>
             if (this.overlay.parentNode && !this.overlay.parentNode.classList.contains('make-catalog-modal-root')) {
                 const rootWrapper = document.createElement('div');
                 rootWrapper.className = 'make-catalog make-catalog-modal-root';
@@ -504,6 +504,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderFilters() {
         const container = document.getElementById('filters-container');
         if (!container) return;
+
+        // SMART LAYOUT: Умное переключение сетки в зависимости от кол-ва включенных фильтров
+        const catalogRoot = document.querySelector('.make-catalog');
+        if (catalogRoot) {
+            const enabledFiltersCount = APP_CONFIG.filters.filter(f => f.enabled).length;
+            const threshold = APP_CONFIG.autoLayoutThreshold || 5;
+            if (enabledFiltersCount > threshold) {
+                catalogRoot.setAttribute('data-filter-layout', 'horizontal');
+            } else {
+                catalogRoot.setAttribute('data-filter-layout', 'vertical');
+            }
+        }
         
         let html = '';
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
@@ -525,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (f.type === 'toggle') {
                 html += `<div class="toggle-row" id="tog-${f.key}" data-key="${f.key}"></div>`;
             }
-            html += `</div>`;
+            html += `</div><div class="f-sep"></div>`;
         });
         
         container.innerHTML = html;
