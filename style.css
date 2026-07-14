@@ -31,13 +31,10 @@
   background: var(--color-bg-main);
   -webkit-font-smoothing: antialiased;
   line-height: 1.4;
-  animation: catalogFadeIn 0.5s ease-out forwards;
 }
 
-@keyframes catalogFadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+/* Технический класс-обертка для модального окна в корне документа */
+.make-catalog-modal-root { background: transparent !important; width: 0; height: 0; position: static; }
 
 .make-catalog *, .make-catalog *::before, .make-catalog *::after {
   box-sizing: border-box; margin: 0; padding: 0;
@@ -46,8 +43,16 @@
 .make-catalog svg { display: block; margin: 0; padding: 0; line-height: 1; }
 
 /* ================================================================
-   2. ЛЕЙАУТ КАТАЛОГА (ВЕРТИКАЛЬНЫЙ И ГОРИЗОНТАЛЬНЫЙ)
+   2. ЛЕЙАУТ КАТАЛОГА И АНИМАЦИЯ ПОЯВЛЕНИЯ
 ================================================================ */
+/* Анимация перенесена внутрь каталога, чтобы не ломать position: fixed у модалки */
+.make-catalog .catalog-wrap { animation: catalogFadeIn 0.6s ease-out forwards; }
+
+@keyframes catalogFadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: none; } /* transform: none гарантирует сброс контекста наложения */
+}
+
 /* Вертикальный */
 .make-catalog[data-filter-layout="vertical"] .catalog-wrap {
   max-width: 1440px; margin: 0 auto; padding: 24px 40px 80px;
@@ -374,7 +379,7 @@
   .make-catalog .modal-left { width: 100%; flex: 0 0 auto; gap: 0; padding: 0; }
   .make-catalog .modal-gallery { height: 35vh; min-height: 250px; border-radius: 20px 20px 0 0; }
   
-  /* Горизонтальный свайп для мобильных */
+  /* Горизонтальный свайп для мобильных (по одной картинке) */
   .make-catalog .modal-gallery-track { flex-direction: row; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; gap: 0; padding-bottom: 0; }
   .make-catalog .modal-gallery-track img { flex: 0 0 100%; height: 100%; border-radius: 0; object-fit: cover; }
   
@@ -382,11 +387,13 @@
   .make-catalog .modal-nav-prev { left: 12px; right: auto; }
   .make-catalog .modal-nav-next { right: 12px; }
   .make-catalog .modal-nav-prev:hover, .make-catalog .modal-nav-next:hover { transform: translateY(-50%) scale(1.05); }
+  /* Поворачиваем стрелки влево-вправо на мобильных */
   .make-catalog .modal-nav-prev svg { transform: rotate(-90deg); transform-origin: center center; }
   .make-catalog .modal-nav-next svg { transform: rotate(-90deg); transform-origin: center center; }
   .make-catalog .modal-counter { top: auto; bottom: 16px; right: 16px; left: auto; }
 
   .make-catalog .modal-thumbs { display: none; } 
+  /* Отступ снизу для зафиксированной панели кнопок */
   .make-catalog .modal-right { width: 100%; padding: 24px 20px 120px; flex: 1; }
   .make-catalog .modal-close { top: 12px; right: 12px; width: 36px; height: 36px; background: rgba(0,0,0,0.5); color: #FFF; }
   .make-catalog .modal-title { font-size: 24px; padding-right: 40px; }

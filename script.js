@@ -247,6 +247,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         init() {
             if (!this.overlay) return;
+
+            // ФИКС position: fixed ДЛЯ TILDA
+            // Вырываем модалку из Tilda и кладем в самый корень <body>
+            if (this.overlay.parentNode && !this.overlay.parentNode.classList.contains('make-catalog-modal-root')) {
+                const rootWrapper = document.createElement('div');
+                rootWrapper.className = 'make-catalog make-catalog-modal-root';
+                rootWrapper.appendChild(this.overlay);
+                document.body.appendChild(rootWrapper);
+            }
+
             this.overlay.querySelector('.modal-close').addEventListener('click', () => this.close());
             this.overlay.querySelector('.modal-nav-prev').addEventListener('click', () => this.prevImage());
             this.overlay.querySelector('.modal-nav-next').addEventListener('click', () => this.nextImage());
@@ -517,7 +527,6 @@ document.addEventListener('DOMContentLoaded', () => {
             html += `</div><div class="f-sep"></div>`;
         });
         
-        // Удален блок генерации сортировки отсюда (теперь он в index.html)
         container.innerHTML = html;
     }
 
@@ -688,7 +697,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPagination();
             renderCardsPage();
             
-            // Плавный скролл к началу каталога
             const topBar = document.querySelector('.catalog-top-bar');
             if (topBar) topBar.scrollIntoView({ behavior: 'smooth' });
         });
@@ -752,7 +760,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         urlManager.syncFiltersToUrl();
         
-        // ОБНОВЛЕНИЕ: Динамический текст количества машин с правильным склонением
         const topCountEl = document.getElementById('catalog-results-count');
         if (topCountEl) {
             const word = getDeclension(filteredCars.length, ['автомобиль', 'автомобиля', 'автомобилей']);
