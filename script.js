@@ -9,25 +9,20 @@
 
         // Настройки кредитного калькулятора
         credit: {
-            termYears: 8,              // Срок кредита в годах
-            downPaymentPercent: 80,    // Первоначальный взнос в %
-            markupPercent: 10          // Наценка автосалона в %
+            termYears: 8,
+            downPaymentPercent: 80,
+            markupPercent: 10
         },
 
-        //Ссылки для каталога (1 основная, вторая фолбэк)
         feedUrls: [
-            'https://dhost.makeagency.ru/playback/test-catalog-feed.json',
-            'http://s3.hommenest.ru/digital/backup/test-catalog-feed.json'
+            'https://dhost.makeagency.ru/playback/udm-feed.json',
+            'http://s3.hommenest.ru/digital/backup/udm-feed.json'
         ],
         
         cacheName: 'make_catalog_cache',
         cacheTTL: 25 * 60 * 1000, 
-        
-        // Автоматическая панель фильтров, значение указывает после скольки фильтров будет переведена из вертикальной в горизонтальную
         autoLayoutThreshold: 5, 
         
-        //Настройка панели фильтров
-        //dependsOn показывает зависимость от предыдущего поля
         filters: [
             { key: 'original_mark_id', type: 'select', label: 'Марка',           enabled: true },
             { key: 'model',            type: 'select', label: 'Модель',          enabled: true, dependsOn: 'original_mark_id' },
@@ -67,22 +62,15 @@
 
     const hasFullCatalog = !!FDOM.cardsContainer;
     const hasRandomCatalog = !!FDOM.randomGrid;
-    
     const randomCatalogLimit = hasRandomCatalog ? Math.max(1, parseInt(FDOM.randomGrid.getAttribute('data-limit') || '9', 10)) : 9;
 
-    let cars = [];
-    let filteredCars = [];
-    let lastLeadCar = null;
-    const filterInstances = { multiselects: {} };
-    let currentPage = 1;
-    let pageSize = parseInt(document.getElementById('page-size')?.value) || 16; //Отображение карточек на 1 страницу
-    let lazyObserver = null;
+    let cars = [], filteredCars = [], lastLeadCar = null, filterInstances = { multiselects: {} };
+    let currentPage = 1, pageSize = parseInt(document.getElementById('page-size')?.value) || 16, lazyObserver = null;
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"><rect width="100%" height="100%" fill="#e2e8f0"/><text x="50%" y="50%" font-family="Arial" font-size="16" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Нет фото</text></svg>'
     );
 
-    // ========== УТИЛИТЫ И SEO ==========
     function escapeHtml(value) {
         if (value === null || value === undefined) return '';
         return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -108,7 +96,6 @@
     function lockBodyScroll() { document.body.style.paddingRight = getScrollbarWidth() + 'px'; document.body.style.overflow = 'hidden'; }
     function unlockBodyScroll() { document.body.style.paddingRight = ''; document.body.style.overflow = ''; }
 
-    // === РАСЧЕТ КРЕДИТА ===
     function calculateMonthlyPayment(price) {
         if (!price || price <= 0) return 0;
         const conf = APP_CONFIG.credit;
@@ -116,12 +103,10 @@
         const downPaymentValue = priceWithMarkup * (conf.downPaymentPercent / 100);
         const loanAmount = priceWithMarkup - downPaymentValue;
         const totalMonths = conf.termYears * 12;
-        
         if (totalMonths <= 0) return Math.round(loanAmount);
         return Math.ceil(loanAmount / totalMonths);
     }
 
-    // === РАССЧЁТ ТЕМНОЙ ТЕМЫ И ЦВЕТОВОЙ СХЕМЫ ===
     function hexToHSL(hex) {
         hex = hex.replace('#', '');
         let r = parseInt(hex.substring(0, 2), 16) / 255;
@@ -144,9 +129,7 @@
 
     function getContrastYIQ(hex) {
         hex = hex.replace("#", "");
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
+        const r = parseInt(hex.substr(0, 2), 16), g = parseInt(hex.substr(2, 2), 16), b = parseInt(hex.substr(4, 2), 16);
         return ((r * 299) + (g * 587) + (b * 114)) / 1000;
     }
 
@@ -187,7 +170,34 @@
         });
     };
 
-    // Функция перерисовки для Демо-панели
+    // ФУНКЦИЯ ДЛЯ ПАНЕЛИ ВИДЖЕТА (СМЕНА ВНЕШНЕГО ВИДА)
+    window.makeCatalogSetLayout = function(layout, limit = 9) {
+        const catalogRoot = document.querySelector('.make-catalog');
+        if (!catalogRoot) return;
+        
+        catalogRoot.setAttribute('data-filter-layout', layout);
+        
+        const sidebar = document.querySelector('.sidebar');
+        const topBar = document.querySelector('.catalog-top-bar');
+        const pagCont = document.getElementById('pagination-container');
+        const mobFilterToggle = document.getElementById('mobile-filter-toggle');
+        
+        if (layout === 'showcase') {
+            if (sidebar) sidebar.style.display = 'none';
+            if (topBar) topBar.style.display = 'none';
+            if (pagCont) pagCont.style.display = 'none';
+            if (mobFilterToggle) mobFilterToggle.style.display = 'none';
+            
+            const shuffled = [...cars].sort(() => 0.5 - Math.random());
+            renderCards(shuffled.slice(0, limit), FDOM.cardsContainer);
+        } else {
+            if (sidebar) sidebar.style.display = '';
+            if (topBar) topBar.style.display = '';
+            if (mobFilterToggle) mobFilterToggle.style.display = '';
+            applyFilters();
+        }
+    };
+
     window.makeCatalogReRender = function() {
         renderCardsPage();
         if (carDetailModal && carDetailModal.isOpen && carDetailModal.currentCar) {
@@ -202,6 +212,7 @@
         }
     };
 
+    // (Весь остальной код script.js от generateSEOLinks до конца остается без изменений)
     function generateSEOLinks() {
         const seoContainer = document.getElementById('seo-links-container');
         if (!seoContainer || !cars.length) return;
@@ -230,7 +241,6 @@
         target.innerHTML = html;
     }
 
-    // ========== ИНДЕКСИРОВАННАЯ БД ==========
     function openCacheDB() {
         return new Promise((res, rej) => {
             const req = indexedDB.open(APP_CONFIG.cacheName, 1);
@@ -256,7 +266,6 @@
         } catch(e) {}
     }
 
-    // ========== URL МЕНЕДЖЕР ==========
     class URLManager {
         constructor() { this.init(); }
         init() {
@@ -345,7 +354,6 @@
     }
     const urlManager = new URLManager();
 
-    // ========== МОДАЛЬНОЕ ОКНО ==========
     class CarDetailModal {
         constructor() {
             this.isOpen = false;
@@ -376,7 +384,6 @@
                 if (!this.imagesCount) return;
                 const isVertical = window.innerWidth > 900;
                 let idx = 0;
-                
                 if (isVertical) {
                     const imgs = Array.from(this.track.querySelectorAll('img'));
                     const trackCenter = this.track.scrollTop + (this.track.clientHeight / 2);
@@ -389,10 +396,8 @@
                 } else {
                     idx = Math.round(this.track.scrollLeft / this.track.clientWidth);
                 }
-                
                 idx = Math.max(0, Math.min(idx, this.imagesCount - 1));
                 this.counterEl.textContent = `${idx + 1} /${this.imagesCount}`;
-                
                 const thumbs = this.overlay.querySelectorAll('.modal-thumb');
                 thumbs.forEach((t, i) => t.classList.toggle('is-active', i === idx));
             }, 50));
@@ -401,33 +406,23 @@
                 if (e.target === this.overlay) this.close();
             });
         }
-        
         handleKeyDown(e) {
             if (!this.isOpen) return;
             if (e.key === 'Escape') { this.close(); return; }
             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); this.nextImage(); }
             if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); this.prevImage(); }
-
             if (e.key === 'Tab') {
                 const focusableElements = this.overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
                 if (!focusableElements.length) return;
                 const firstElement = focusableElements[0];
                 const lastElement = focusableElements[focusableElements.length - 1];
-
                 if (e.shiftKey) { 
-                    if (document.activeElement === firstElement) {
-                        e.preventDefault();
-                        lastElement.focus();
-                    }
+                    if (document.activeElement === firstElement) { e.preventDefault(); lastElement.focus(); }
                 } else { 
-                    if (document.activeElement === lastElement) {
-                        e.preventDefault();
-                        firstElement.focus();
-                    }
+                    if (document.activeElement === lastElement) { e.preventDefault(); firstElement.focus(); }
                 }
             }
         }
-
         open(car) {
             this.currentCar = car;
             this.isOpen = true;
@@ -458,7 +453,6 @@
 
             this.overlay.querySelector('#modalTitle').textContent = car.mark_id;
             
-            // Расчет кредита и обновление блока цены
             const currentPrice = car.price - (car.max_discount || 0);
             const monthlyPayment = calculateMonthlyPayment(currentPrice);
             
@@ -514,10 +508,8 @@
         close(opts = {}) {
             this.isOpen = false;
             document.removeEventListener('keydown', this.handleKeyDown);
-            
             if (!opts.skipUrlClear) urlManager.clearCarUrl();
             this.overlay.classList.remove('visible');
-            
             setTimeout(() => {
                 this.overlay.classList.add('hidden');
                 this.overlay.style.display = 'none';
@@ -530,7 +522,6 @@
             this.track.innerHTML = '';
             const thumbsContainer = this.overlay.querySelector('#modalThumbs');
             thumbsContainer.innerHTML = '';
-            
             const images = (Array.isArray(car.images) && car.images.length) ? car.images : [PLACEHOLDER_IMG];
             this.imagesCount = images.length;
             this.counterEl.textContent = `1 / ${this.imagesCount}`;
@@ -540,7 +531,6 @@
                 img.src = src;
                 img.onerror = function() { this.src = PLACEHOLDER_IMG; };
                 this.track.appendChild(img);
-
                 const thumb = document.createElement('button');
                 thumb.className = `modal-thumb ${idx === 0 ? 'is-active' : ''}`;
                 thumb.innerHTML = `<img src="${escapeHtml(src)}" alt="">`;
@@ -558,24 +548,17 @@
         }
         prevImage() { 
             const isVertical = window.innerWidth > 900;
-            if (isVertical) {
-                this.track.scrollBy({ top: -500, behavior: 'smooth' });
-            } else {
-                this.track.scrollBy({ left: -this.track.clientWidth, behavior: 'smooth' });
-            }
+            if (isVertical) this.track.scrollBy({ top: -500, behavior: 'smooth' });
+            else this.track.scrollBy({ left: -this.track.clientWidth, behavior: 'smooth' });
         }
         nextImage() { 
             const isVertical = window.innerWidth > 900;
-            if (isVertical) {
-                this.track.scrollBy({ top: 500, behavior: 'smooth' });
-            } else {
-                this.track.scrollBy({ left: this.track.clientWidth, behavior: 'smooth' });
-            }
+            if (isVertical) this.track.scrollBy({ top: 500, behavior: 'smooth' });
+            else this.track.scrollBy({ left: this.track.clientWidth, behavior: 'smooth' });
         }
     }
     const carDetailModal = new CarDetailModal();
 
-    // ========== КОМПОНЕНТЫ ФИЛЬТРОВ ==========
     class MultiSelect {
         constructor(container, placeholder) {
             this.container = container;
@@ -637,7 +620,6 @@
         getSelectedValues() { return Array.from(this.selectedValues); }
     }
 
-    // ========== ДИНАМИЧЕСКИЙ РЕНДЕР И ФИЛЬТРАЦИЯ ==========
     function renderFilters() {
         const container = document.getElementById('filters-container');
         if (!container) return;
@@ -646,18 +628,16 @@
         if (catalogRoot) {
             const enabledFiltersCount = APP_CONFIG.filters.filter(f => f.enabled).length;
             const threshold = APP_CONFIG.autoLayoutThreshold || 5;
-            if (enabledFiltersCount > threshold) {
+            if (enabledFiltersCount > threshold && catalogRoot.getAttribute('data-filter-layout') !== 'showcase') {
                 catalogRoot.setAttribute('data-filter-layout', 'horizontal');
-            } else {
+            } else if (catalogRoot.getAttribute('data-filter-layout') !== 'showcase') {
                 catalogRoot.setAttribute('data-filter-layout', 'vertical');
             }
         }
         
         let html = '';
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
-            html += `<div class="filter-group" data-key="${f.key}">
-                <label class="filter-label">${escapeHtml(f.label)}</label>`;
-            
+            html += `<div class="filter-group" data-key="${f.key}"><label class="filter-label">${escapeHtml(f.label)}</label>`;
             if (f.type === 'multiselect') {
                 html += `<div class="multiselect" id="ms-${f.key}">
                   <div class="multiselect-trigger"><div class="multiselect-selected"><span class="multiselect-placeholder">Любой выбор</span></div><svg class="multiselect-arrow" viewBox="0 0 10 7" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -665,108 +645,61 @@
             } else if (f.type === 'select') {
                 html += `<select class="f-select" id="sel-${f.key}"><option value="">Любой выбор</option></select>`;
             } else if (f.type === 'minmax') {
-                html += `
-                <div class="minmax-row">
-                    <select class="f-select minmax-min" id="sel-${f.key}-min"><option value="">От</option></select>
-                    <select class="f-select minmax-max" id="sel-${f.key}-max"><option value="">До</option></select>
-                </div>`;
+                html += `<div class="minmax-row"><select class="f-select minmax-min" id="sel-${f.key}-min"><option value="">От</option></select><select class="f-select minmax-max" id="sel-${f.key}-max"><option value="">До</option></select></div>`;
             } else if (f.type === 'toggle') {
                 html += `<div class="toggle-row" id="tog-${f.key}" data-key="${f.key}"></div>`;
             }
             html += `</div>`;
         });
-        
         container.innerHTML = html;
     }
 
     function updateDependencies() {
         APP_CONFIG.filters.forEach(f => {
             if (!f.enabled || !f.dependsOn) return;
-            
             const parentKey = f.dependsOn;
             let parentVals = [];
             const parentF = APP_CONFIG.filters.find(x => x.key === parentKey);
             
             if (parentF) {
-                if (parentF.type === 'multiselect') {
-                    parentVals = filterInstances.multiselects[parentKey]?.getSelectedValues() || [];
-                } else if (parentF.type === 'select') {
-                    const v = document.getElementById(`sel-${parentKey}`)?.value;
-                    if (v) parentVals.push(v);
-                }
+                if (parentF.type === 'multiselect') parentVals = filterInstances.multiselects[parentKey]?.getSelectedValues() || [];
+                else if (parentF.type === 'select') { const v = document.getElementById(`sel-${parentKey}`)?.value; if (v) parentVals.push(v); }
             }
 
             const isParentSelected = parentVals.length > 0;
-
-            if (f.type === 'select') {
-                const el = document.getElementById(`sel-${f.key}`);
-                if (el) el.disabled = !isParentSelected;
-            } else if (f.type === 'multiselect') {
-                const msContainer = document.getElementById(`ms-${f.key}`);
-                if (msContainer) {
-                    isParentSelected ? msContainer.classList.remove('is-disabled') : msContainer.classList.add('is-disabled');
-                }
-            }
+            if (f.type === 'select') { const el = document.getElementById(`sel-${f.key}`); if (el) el.disabled = !isParentSelected; }
+            else if (f.type === 'multiselect') { const msContainer = document.getElementById(`ms-${f.key}`); if (msContainer) isParentSelected ? msContainer.classList.remove('is-disabled') : msContainer.classList.add('is-disabled'); }
 
             if (!isParentSelected) {
-                if (f.type === 'select') {
-                    const el = document.getElementById(`sel-${f.key}`);
-                    if (el) {
-                        el.innerHTML = `<option value="">Любой выбор</option>`;
-                        el.value = '';
-                    }
-                } else if (f.type === 'multiselect') {
-                    const ms = filterInstances.multiselects[f.key];
-                    if (ms) {
-                        ms.setOptions([]);
-                        ms.selectedValues.clear();
-                        ms.renderDropdown();
-                        ms.renderSelected();
-                    }
-                }
+                if (f.type === 'select') { const el = document.getElementById(`sel-${f.key}`); if (el) { el.innerHTML = `<option value="">Любой выбор</option>`; el.value = ''; } }
+                else if (f.type === 'multiselect') { const ms = filterInstances.multiselects[f.key]; if (ms) { ms.setOptions([]); ms.selectedValues.clear(); ms.renderDropdown(); ms.renderSelected(); } }
                 return;
             }
             
             let validCars = cars;
             let currentFilter = f;
-            
             while (currentFilter && currentFilter.dependsOn) {
                 const pKey = currentFilter.dependsOn;
                 const pF = APP_CONFIG.filters.find(x => x.key === pKey);
                 if (!pF) break;
-                
                 let pVals = [];
-                if (pF.type === 'multiselect') {
-                    pVals = filterInstances.multiselects[pKey]?.getSelectedValues() || [];
-                } else if (pF.type === 'select') {
-                    const v = document.getElementById(`sel-${pKey}`)?.value;
-                    if (v) pVals.push(v);
-                }
-                
-                if (pVals.length > 0) {
-                    validCars = validCars.filter(c => pVals.includes(String(c[pKey])));
-                }
+                if (pF.type === 'multiselect') pVals = filterInstances.multiselects[pKey]?.getSelectedValues() || [];
+                else if (pF.type === 'select') { const v = document.getElementById(`sel-${pKey}`)?.value; if (v) pVals.push(v); }
+                if (pVals.length > 0) validCars = validCars.filter(c => pVals.includes(String(c[pKey])));
                 currentFilter = pF; 
             }
 
             const uniqueVals = [...new Set(validCars.map(c => c[f.key]).filter(Boolean))].sort();
-
             if (f.type === 'select') {
                 const el = document.getElementById(`sel-${f.key}`);
                 if (el) {
                     const currentVal = el.value;
                     el.innerHTML = `<option value="">Любой выбор</option>` + uniqueVals.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-                    if (uniqueVals.includes(currentVal)) el.value = currentVal;
-                    else el.value = '';
+                    if (uniqueVals.includes(currentVal)) el.value = currentVal; else el.value = '';
                 }
             } else if (f.type === 'multiselect') {
                 const ms = filterInstances.multiselects[f.key];
-                if (ms) {
-                    ms.setOptions(uniqueVals);
-                    ms.selectedValues = new Set([...ms.selectedValues].filter(v => uniqueVals.includes(v)));
-                    ms.renderDropdown();
-                    ms.renderSelected();
-                }
+                if (ms) { ms.setOptions(uniqueVals); ms.selectedValues = new Set([...ms.selectedValues].filter(v => uniqueVals.includes(v))); ms.renderDropdown(); ms.renderSelected(); }
             }
         });
     }
@@ -774,7 +707,6 @@
     function initFilters() {
         if (!hasFullCatalog) return;
         renderFilters();
-        
         const getUnique = key => [...new Set(cars.map(c => c[key]).filter(Boolean))].sort();
         
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
@@ -802,9 +734,7 @@
                     const minEl = document.getElementById(`sel-${f.key}-min`);
                     const maxEl = document.getElementById(`sel-${f.key}-max`);
                     let optsHtml = '';
-                    for (let v = min; v <= max; v += f.step) {
-                        optsHtml += `<option value="${v}">${formatNum(v)}</option>`;
-                    }
+                    for (let v = min; v <= max; v += f.step) optsHtml += `<option value="${v}">${formatNum(v)}</option>`;
                     if (minEl) { minEl.innerHTML += optsHtml; minEl.addEventListener('change', applyFilters); }
                     if (maxEl) { maxEl.innerHTML += optsHtml; maxEl.addEventListener('change', applyFilters); }
                 }
@@ -813,9 +743,7 @@
                 if (tog) {
                     const uniqueVals = getUnique(f.key);
                     let btnsHtml = `<button type="button" class="toggle-opt is-active" data-val="all">Все</button>`;
-                    uniqueVals.forEach(val => {
-                        btnsHtml += `<button type="button" class="toggle-opt" data-val="${escapeHtml(val)}">${escapeHtml(val)}</button>`;
-                    });
+                    uniqueVals.forEach(val => btnsHtml += `<button type="button" class="toggle-opt" data-val="${escapeHtml(val)}">${escapeHtml(val)}</button>`);
                     tog.innerHTML = btnsHtml;
                     tog.addEventListener('click', (e) => {
                         const btn = e.target.closest('.toggle-opt');
@@ -845,7 +773,6 @@
             currentPage = parseInt(btn.dataset.page);
             renderPagination();
             renderCardsPage();
-            
             const topBar = document.querySelector('.catalog-top-bar');
             if (topBar) topBar.scrollIntoView({ behavior: 'smooth' });
         });
@@ -857,44 +784,30 @@
 
     function applyFilters() {
         if (!hasFullCatalog) return;
-        
         updateDependencies();
         const sortBy = document.getElementById('sort-select')?.value || 'default';
 
         const activeFiltersData = [];
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
             let val = null;
-            if (f.type === 'multiselect') {
-                val = filterInstances.multiselects[f.key]?.getSelectedValues() || [];
-            } else if (f.type === 'select') {
-                val = document.getElementById(`sel-${f.key}`)?.value;
-            } else if (f.type === 'minmax') {
-                val = {
-                    min: parseInt(document.getElementById(`sel-${f.key}-min`)?.value),
-                    max: parseInt(document.getElementById(`sel-${f.key}-max`)?.value)
-                };
-            } else if (f.type === 'toggle') {
-                val = document.querySelector(`#tog-${f.key} .is-active`)?.dataset.val || 'all';
-            }
+            if (f.type === 'multiselect') val = filterInstances.multiselects[f.key]?.getSelectedValues() || [];
+            else if (f.type === 'select') val = document.getElementById(`sel-${f.key}`)?.value;
+            else if (f.type === 'minmax') val = { min: parseInt(document.getElementById(`sel-${f.key}-min`)?.value), max: parseInt(document.getElementById(`sel-${f.key}-max`)?.value) };
+            else if (f.type === 'toggle') val = document.querySelector(`#tog-${f.key} .is-active`)?.dataset.val || 'all';
             activeFiltersData.push({ config: f, value: val });
         });
 
         filteredCars = cars.filter(car => {
             for (const { config: f, value: val } of activeFiltersData) {
                 const carVal = car[f.key];
-
-                if (f.type === 'multiselect') {
-                    if (val.length && !val.includes(String(carVal))) return false;
-                } else if (f.type === 'select') {
-                    if (val && String(carVal) !== val) return false;
-                } else if (f.type === 'minmax') {
+                if (f.type === 'multiselect') { if (val.length && !val.includes(String(carVal))) return false; }
+                else if (f.type === 'select') { if (val && String(carVal) !== val) return false; }
+                else if (f.type === 'minmax') {
                     const numVal = parseInt(carVal);
                     if (!isNaN(val.min) && numVal < val.min) return false;
                     if (!isNaN(val.max) && numVal > val.max) return false;
                 } else if (f.type === 'toggle') {
-                    if (val !== 'all') {
-                        if (String(carVal).toLowerCase() !== String(val).toLowerCase()) return false;
-                    }
+                    if (val !== 'all' && String(carVal).toLowerCase() !== String(val).toLowerCase()) return false;
                 }
             }
             return true;
@@ -920,7 +833,6 @@
         renderCardsPage();
     }
 
-    // ========== ЛОГИКА ПАГИНАЦИИ ==========
     function renderCardsPage() {
         const start = (currentPage - 1) * pageSize;
         const paginatedCars = filteredCars.slice(start, start + pageSize);
@@ -937,17 +849,10 @@
         if (!FDOM.pagination) return;
         const pagWrapper = document.getElementById('pagination');
         const totalPages = Math.ceil(filteredCars.length / pageSize);
-        
-        if (totalPages <= 1) {
-            FDOM.pagination.style.display = 'none';
-            return;
-        }
+        if (totalPages <= 1) { FDOM.pagination.style.display = 'none'; return; }
         
         FDOM.pagination.style.display = 'flex';
-        let html = '';
-        
-        html += `<button class="pagination-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>Назад</button>`;
-        
+        let html = `<button class="pagination-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>Назад</button>`;
         for (let i = 1; i <= totalPages; i++) {
             if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
                 html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
@@ -955,23 +860,18 @@
                 html += `<span class="pagination-ellipsis">...</span>`;
             }
         }
-        
         html += `<button class="pagination-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>Вперед</button>`;
         pagWrapper.innerHTML = html;
     }
 
-    // ========== МОБИЛЬНАЯ АДАПТАЦИЯ ==========
     function handleMobileDrawer() {
         const drawerBody = document.getElementById('mob-drawer-body');
         const filtersContainer = document.getElementById('filters-container');
         const sidebar = document.querySelector('.sidebar');
-        
         if (!drawerBody || !sidebar || !filtersContainer) return;
-        
         const isMobile = window.innerWidth <= 900;
-        if (isMobile && !drawerBody.contains(filtersContainer)) {
-            drawerBody.appendChild(filtersContainer);
-        } else if (!isMobile && !sidebar.contains(filtersContainer)) {
+        if (isMobile && !drawerBody.contains(filtersContainer)) drawerBody.appendChild(filtersContainer);
+        else if (!isMobile && !sidebar.contains(filtersContainer)) {
             const sidebarFoot = sidebar.querySelector('.sidebar-foot');
             if (sidebarFoot) sidebar.insertBefore(filtersContainer, sidebarFoot);
         }
@@ -983,7 +883,6 @@
         document.getElementById('mob-drawer').classList.add('is-open');
         document.body.style.overflow = 'hidden';
     });
-
     const closeDrawer = () => {
         document.getElementById('mob-overlay').classList.remove('is-open');
         document.getElementById('mob-drawer').classList.remove('is-open');
@@ -995,7 +894,6 @@
     document.getElementById('clear-filters')?.addEventListener('click', () => {
         const sortEl = document.getElementById('sort-select');
         if (sortEl) sortEl.value = 'default';
-        
         APP_CONFIG.filters.filter(f => f.enabled).forEach(f => {
             if (f.type === 'multiselect') {
                 filterInstances.multiselects[f.key]?.selectedValues.clear();
@@ -1005,14 +903,10 @@
                 const el = document.getElementById(`sel-${f.key}`);
                 if (el) el.value = '';
             } else if (f.type === 'minmax') {
-                const minEl = document.getElementById(`sel-${f.key}-min`);
-                const maxEl = document.getElementById(`sel-${f.key}-max`);
-                if (minEl) minEl.value = '';
-                if (maxEl) maxEl.value = '';
+                const minEl = document.getElementById(`sel-${f.key}-min`), maxEl = document.getElementById(`sel-${f.key}-max`);
+                if (minEl) minEl.value = ''; if (maxEl) maxEl.value = '';
             } else if (f.type === 'toggle') {
-                document.querySelectorAll(`#tog-${f.key} .toggle-opt`).forEach(b => {
-                    b.classList.toggle('is-active', b.dataset.val === 'all');
-                });
+                document.querySelectorAll(`#tog-${f.key} .toggle-opt`).forEach(b => b.classList.toggle('is-active', b.dataset.val === 'all'));
             }
         });
         applyFilters();
@@ -1026,30 +920,20 @@
         renderCards(randomCars, FDOM.randomGrid);
     }
 
-    // ========== РЕНДЕР КАРТОЧЕК==========
     function createCardHTML(car) {
         const imgSrc = (Array.isArray(car.images) && car.images.length) ? car.images[0] : PLACEHOLDER_IMG;
         const hasCarousel = car.images && car.images.length > 1;
-        
         const hasDiscount = car.price && car.max_discount > 0;
         const currentPrice = car.price - (car.max_discount || 0);
-        
         let badgesHTML = `<span class="badge-stock">В наличии</span>`;
         if (hasDiscount) badgesHTML += `<span class="badge-discount">Скидка</span>`;
-
         let priceHTML = '';
         if (car.price) {
             if (hasDiscount) {
-                priceHTML = `<span class="price-main price-new">${escapeHtml(formatNum(currentPrice))} ₽</span>
-                             <span class="price-old">${escapeHtml(formatNum(car.price))} ₽</span>`;
-            } else {
-                priceHTML = `<span class="price-main price-new">${escapeHtml(formatNum(car.price))} ₽</span>`;
-            }
-        } else {
-            priceHTML = `<span class="price-main price-new">Цена по запросу</span>`;
-        }
+                priceHTML = `<span class="price-main price-new">${escapeHtml(formatNum(currentPrice))} ₽</span><span class="price-old">${escapeHtml(formatNum(car.price))} ₽</span>`;
+            } else { priceHTML = `<span class="price-main price-new">${escapeHtml(formatNum(car.price))} ₽</span>`; }
+        } else { priceHTML = `<span class="price-main price-new">Цена по запросу</span>`; }
         
-        // Вычисляем ежемесячный платеж для карточки
         const monthlyPayment = calculateMonthlyPayment(currentPrice);
 
         return `
@@ -1079,16 +963,10 @@
         if (!container) return;
         if (!list.length) { container.innerHTML = `<div class="no-results">Ничего не найдено</div>`; return; }
         container.innerHTML = list.map(car => createCardHTML(car)).join('');
-        
         if (lazyObserver) lazyObserver.disconnect();
         lazyObserver = new IntersectionObserver((entries, obs) => {
             entries.forEach(entry => {
-                if(entry.isIntersecting) {
-                    const img = entry.target;
-                    img.src = img.dataset.src;
-                    img.classList.remove('lazy-image');
-                    obs.unobserve(img);
-                }
+                if(entry.isIntersecting) { const img = entry.target; img.src = img.dataset.src; img.classList.remove('lazy-image'); obs.unobserve(img); }
             });
         });
         container.querySelectorAll('img.lazy-image').forEach(img => lazyObserver.observe(img));
@@ -1097,107 +975,59 @@
     function bindGridEvents(container) {
         if (!container) return;
         container.addEventListener('click', (e) => {
-            const btnPrev = e.target.closest('.carousel-button.prev');
-            const btnNext = e.target.closest('.carousel-button.next');
-            const leadBtn = e.target.closest('.card-btn');
-            const card = e.target.closest('.car-card');
-
-            if (leadBtn) {
-                lastLeadCar = { title: leadBtn.dataset.carTitle };
-                scheduleFillTildaFields(getPopupHook(leadBtn));
-                return;
-            }
-
+            const btnPrev = e.target.closest('.carousel-button.prev'), btnNext = e.target.closest('.carousel-button.next');
+            const leadBtn = e.target.closest('.card-btn'), card = e.target.closest('.car-card');
+            if (leadBtn) { lastLeadCar = { title: leadBtn.dataset.carTitle }; scheduleFillTildaFields(getPopupHook(leadBtn)); return; }
             if (card) {
                 const car = cars.find(c => String(c.id) === card.dataset.id);
                 if (!car) return;
-                
                 if (btnPrev || btnNext) {
                     e.stopPropagation(); e.preventDefault();
                     const img = card.querySelector('img');
                     let idx = parseInt(img.dataset.idx || 0, 10);
                     idx = btnPrev ? (idx - 1 + car.images.length) % car.images.length : (idx + 1) % car.images.length;
-                    img.dataset.idx = idx;
-                    img.src = car.images[idx];
-                } else {
-                    carDetailModal.open(car);
-                }
+                    img.dataset.idx = idx; img.src = car.images[idx];
+                } else carDetailModal.open(car);
             }
         });
     }
 
-    bindGridEvents(FDOM.cardsContainer);
-    bindGridEvents(FDOM.randomGrid);
+    bindGridEvents(FDOM.cardsContainer); bindGridEvents(FDOM.randomGrid);
 
-    // ========== ЗАГРУЗКА И ПАРСИНГ ==========
     async function loadCarsData() {
         renderSkeletons(12);
-        
         let jsonData = await getCachedFeed();
-        
         if (!jsonData) {
             for (const url of APP_CONFIG.feedUrls) {
                 try {
                     const resp = await fetch(url, { cache: 'no-store' });
-                    if (resp.ok) { 
-                        jsonData = await resp.json(); 
-                        await setCachedFeed(jsonData); 
-                        break; 
-                    }
+                    if (resp.ok) { jsonData = await resp.json(); await setCachedFeed(jsonData); break; }
                 } catch(e) { console.warn(`[Фолбэк] Ошибка сети при обращении к ${url}:`, e); }
             }
         }
 
         const payload = Array.isArray(jsonData) ? jsonData[0] : jsonData;
-
         if (payload && payload.data) {
             cars = Object.entries(payload.data).map(([id, data]) => ({
-                id: id,
-                mark_id: `${data.mark || ''} ${data.model || ''}`.trim(),
-                original_mark_id: data.mark || '',
-                model: data.model || '',
-                year: data.year,
-                price: parseInt(data.price) || 0,
-                max_discount: parseInt(data.max_discount) || 0,
-                run: parseInt(data.run) || 0,
-                gearbox: data.gearbox,
-                drive: data.drive,
-                color: data.color,
-                body_type: data.body_type,
-                engine_type: data.engine_type,
-                engine_volume: data.engine_volume || '',
-                engine_power: parseInt(data.engine_power) || 0,
-                owners_number: data.owners_number || data.owners || '',
-                pts: data.pts || '',
-                wheel: data.wheel || '',
-                generation: data.generation || '',
-                images: data.images || [],
-                description: data.description,
-                salon: data.salon
+                id: id, mark_id: `${data.mark || ''} ${data.model || ''}`.trim(), original_mark_id: data.mark || '',
+                model: data.model || '', year: data.year, price: parseInt(data.price) || 0, max_discount: parseInt(data.max_discount) || 0,
+                run: parseInt(data.run) || 0, gearbox: data.gearbox, drive: data.drive, color: data.color, body_type: data.body_type,
+                engine_type: data.engine_type, engine_volume: data.engine_volume || '', engine_power: parseInt(data.engine_power) || 0,
+                owners_number: data.owners_number || data.owners || '', pts: data.pts || '', wheel: data.wheel || '',
+                generation: data.generation || '', images: data.images || [], description: data.description, salon: data.salon
             }));
-            
             generateSEOLinks();
-            
-            if (hasFullCatalog) {
-                initFilters();
-            } else if (hasRandomCatalog) {
-                initRandomCatalog();
-            }
-
+            if (hasFullCatalog) initFilters(); else if (hasRandomCatalog) initRandomCatalog();
         } else {
             const target = FDOM.cardsContainer || FDOM.randomGrid;
             if(target) target.innerHTML = '<div class="no-results">Ошибка загрузки данных</div>';
         }
     }
 
-    // ========== ИНТЕГРАЦИЯ С TILDA ==========
     function getPopupHook(trigger) { return trigger.getAttribute('href') || trigger.dataset.popupTarget || ''; }
-    
     let tildaObserver = null;
-    
     function scheduleFillTildaFields(hook) {
         if (!lastLeadCar?.title) return;
-
         const selectors = TILDA_CONFIG.getSelectors(TILDA_CONFIG.modelFieldName).join(',');
         const tryFill = () => {
             const fields = document.querySelectorAll(selectors);
@@ -1205,54 +1035,28 @@
             fields.forEach(f => {
                 if (f.value !== lastLeadCar.title) {
                     f.value = lastLeadCar.title;
-                    f.dispatchEvent(new Event('input', { bubbles: true }));
-                    f.dispatchEvent(new Event('change', { bubbles: true }));
+                    f.dispatchEvent(new Event('input', { bubbles: true })); f.dispatchEvent(new Event('change', { bubbles: true }));
                     filled = true;
                 }
             });
             return filled;
         };
-
         if (tryFill()) return;
-
         if (tildaObserver) tildaObserver.disconnect();
-        
-        tildaObserver = new MutationObserver((mutations, obs) => {
-            if (tryFill()) {
-                obs.disconnect();
-                tildaObserver = null;
-            }
-        });
-
-        tildaObserver.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['class', 'style'] 
-        });
-
-        setTimeout(() => {
-            if (tildaObserver) {
-                tildaObserver.disconnect();
-                tildaObserver = null;
-            }
-        }, 5000);
+        tildaObserver = new MutationObserver((mutations, obs) => { if (tryFill()) { obs.disconnect(); tildaObserver = null; } });
+        tildaObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+        setTimeout(() => { if (tildaObserver) { tildaObserver.disconnect(); tildaObserver = null; } }, 5000);
     }
 
     document.addEventListener('click', (e) => {
         const trigger = e.target.closest('a[href^="#popup:"]');
         if (trigger && TILDA_CONFIG.popupHooks.includes(getPopupHook(trigger))) {
-            carDetailModal.close();
-            scheduleFillTildaFields(getPopupHook(trigger));
+            carDetailModal.close(); scheduleFillTildaFields(getPopupHook(trigger));
         }
     });
 
-    // === ПРИМЕНЕНИЕ ТЕМЫ ПРИ ЗАГРУЗКЕ ===
-    if (APP_CONFIG.themeColor) {
-        window.makeCatalogApplyTheme(APP_CONFIG.themeColor, APP_CONFIG.themeMode);
-    }
+    if (APP_CONFIG.themeColor) window.makeCatalogApplyTheme(APP_CONFIG.themeColor, APP_CONFIG.themeMode);
     
-    // === ДЕБАГ ===
     if (window.__MAKE_DEBUG_UTILS__) {
         const D = window.__MAKE_DEBUG_UTILS__;
         loadCarsData = D.debugWrap(loadCarsData, 'loadCarsData');

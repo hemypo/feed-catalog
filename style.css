@@ -13,6 +13,7 @@
   --color-border:         #E4E6F0;
   --color-bg-main:        #F1F3FA;
   --color-white:          #FFFFFF;
+  --color-panel-bg:       rgba(255, 255, 255, 0.98);
   --color-primary-text:   #0A0A0A; 
 
   --shadow-sm:     0 1px 4px rgba(10,10,40,.06), 0 0 1px rgba(10,10,40,.04);
@@ -89,6 +90,24 @@
 }
 .make-catalog[data-filter-layout="horizontal"] .btn-apply { width: auto; min-width: 200px; margin-top: 0; }
 
+/* Витрина (Showcase) */
+.make-catalog[data-filter-layout="showcase"] .catalog-wrap {
+  max-width: 1440px; margin: 0 auto; padding: 80px 40px; display: block; 
+}
+.make-catalog[data-filter-layout="showcase"] .cards-container::before {
+  content: "Специальные предложения"; display: block; font-family: var(--font-d);
+  font-size: clamp(28px, 3vw, 40px); font-weight: 800; color: var(--color-text-main);
+  text-align: center; margin-bottom: 48px; letter-spacing: -0.5px;
+}
+.make-catalog[data-filter-layout="showcase"] .car-grid {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 32px;
+}
+@media (min-width: 1140px) {
+  .make-catalog[data-filter-layout="showcase"] .car-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 400px)); justify-content: center;
+  }
+}
+
 /* ================================================================
    3. ФИЛЬТРЫ И ЭЛЕМЕНТЫ УПРАВЛЕНИЯ
 ================================================================ */
@@ -104,7 +123,7 @@
   border-radius: var(--radius-sm); padding: 0 32px 0 12px; font-size: 13px;
   color: var(--color-text-main); background: var(--color-white); outline: none;
   transition: all .18s; appearance: none; cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238B8FA8' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: var(--select-arrow, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238B8FA8' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"));
   background-repeat: no-repeat; background-position: right 12px center;
 }
 .make-catalog .f-select:focus { border-color: var(--color-text-main); }
@@ -156,18 +175,14 @@
 /* ================================================================
    4. ТОП-БАР КАТАЛОГА (СОРТИРОВКА И СЧЕТЧИК)
 ================================================================ */
-.make-catalog .catalog-top-bar {
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
-}
-.make-catalog .catalog-results {
-  font-family: var(--font-d); font-size: 16px; font-weight: 800; color: var(--color-text-main);
-}
+.make-catalog .catalog-top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.make-catalog .catalog-results { font-family: var(--font-d); font-size: 16px; font-weight: 800; color: var(--color-text-main); }
 .make-catalog .catalog-top-actions { display: flex; align-items: center; gap: 16px; }
 .make-catalog .simple-select {
   background: transparent; border: none; font-family: var(--font-b); font-size: 14px;
   font-weight: 600; color: var(--color-text-main); cursor: pointer; padding-right: 20px;
   appearance: none; outline: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231A1B22' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: var(--select-arrow, none);
   background-repeat: no-repeat; background-position: right center;
 }
 .make-catalog .simple-select:hover { color: var(--color-primary-hover); }
@@ -181,16 +196,16 @@
 .make-catalog .car-card { background: var(--color-white); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-card); cursor: pointer; transition: transform .25s, box-shadow .25s; display: flex; flex-direction: column; }
 .make-catalog .car-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
 
-.make-catalog .card-img-wrap { position: relative; aspect-ratio: 16 / 10; background: #E8EAF4; overflow: hidden; }
+.make-catalog .card-img-wrap { position: relative; aspect-ratio: 16 / 10; background: var(--color-bg-main); overflow: hidden; }
 .make-catalog .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
 .make-catalog .car-card:hover .card-img-wrap img { transform: scale(1.05); }
 
-/* Бейджи (в наличии, скидка) */
+/* Бейджи (в наличии, скидка) - АДАПТАЦИЯ К ЦВЕТОВОЙ СХЕМЕ */
 .make-catalog .img-badges { position: absolute; top: 12px; left: 12px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 2; pointer-events: none; }
-.make-catalog .badge-stock { background: rgba(26, 27, 34, 0.7); backdrop-filter: blur(8px); color: var(--color-white); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
-.make-catalog .badge-discount { background: #FF3B30; color: var(--color-white); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3); }
+.make-catalog .badge-stock { background: var(--color-primary); color: var(--color-primary-text); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.make-catalog .badge-discount { background: #FF3B30; color: #FFFFFF; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3); }
 
-.make-catalog .carousel-button { display: flex; align-items: center; justify-content: center; position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; background: rgba(255, 255, 255, 0.9); border: none; border-radius: 50%; cursor: pointer; opacity: 0; transition: opacity .2s; z-index: 2; color: var(--color-text-main); }
+.make-catalog .carousel-button { display: flex; align-items: center; justify-content: center; position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; background: var(--color-panel-bg); border: none; border-radius: 50%; cursor: pointer; opacity: 0; transition: opacity .2s; z-index: 2; color: var(--color-text-main); }
 .make-catalog .carousel-button svg { width: 18px; height: 18px; }
 .make-catalog .car-card:hover .carousel-button { opacity: 1; }
 .make-catalog .carousel-button:hover { background: var(--color-white); }
@@ -198,18 +213,41 @@
 .make-catalog .carousel-button.next { right: 8px; }
 
 .make-catalog .card-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
-.make-catalog .card-name { font-family: var(--font-d); font-size: 18px; font-weight: 700; line-height: 1.3; }
+.make-catalog .card-name { font-family: var(--font-d); font-size: 18px; font-weight: 700; line-height: 1.3; color: var(--color-text-main); }
 .make-catalog .card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .make-catalog .ctag { background: var(--color-bg-main); color: var(--color-text-secondary); padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; }
 
 /* Цена и скидка в карточке */
 .make-catalog .card-pricing { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.make-catalog .price-main { font-family: var(--font-d); font-size: 24px; font-weight: 800; line-height: 1.1; }
+.make-catalog .price-main { font-family: var(--font-d); font-size: 24px; font-weight: 800; line-height: 1.1; color: var(--color-text-main); }
 .make-catalog .price-old { font-size: 15px; font-weight: 600; color: var(--color-text-muted); text-decoration: line-through; }
 
-.make-catalog .card-btns { margin-top: auto; }
-.make-catalog .card-btn { width: 100%; height: 44px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: transparent; font-size: 14px; font-weight: 600; color: var(--color-text-main) !important; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all .18s; }
-.make-catalog .card-btn:hover { background: var(--color-text-main); color: var(--color-white) !important; border-color: var(--color-text-main); }
+/* КНОПКИ В КАРТОЧКАХ - ОДНА СТРОКА С АДАПТАЦИЕЙ И ЦВЕТАМИ */
+.make-catalog .card-btns {
+  display: flex; flex-direction: row; gap: 8px; margin-top: auto;
+}
+.make-catalog .card-btn {
+  flex: 1 1 50%; height: 44px; border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm); background: transparent;
+  font-size: clamp(12px, 1.2vw, 14px); font-weight: 600;
+  color: var(--color-text-main) !important; display: flex; align-items: center;
+  justify-content: center; text-decoration: none; transition: all .18s;
+  white-space: nowrap; padding: 0 8px; overflow: hidden;
+}
+.make-catalog .card-btn:hover { background: var(--color-text-main); color: var(--color-bg-main) !important; border-color: var(--color-text-main); }
+
+/* Кнопка с кредитом (Платеж) - Акцентный цвет */
+.make-catalog .card-btn-credit {
+  flex: 1 0 auto; /* Растягивается, если текст длиннее 50% */
+  background: var(--color-primary); 
+  color: var(--color-primary-text) !important; 
+  border-color: var(--color-primary);
+}
+.make-catalog .card-btn-credit:hover {
+  background: var(--color-primary-hover); 
+  border-color: var(--color-primary-hover);
+  color: var(--color-primary-text) !important;
+}
 
 .make-catalog .no-results, .make-catalog .loader { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--color-text-muted); font-size: 16px; }
 
@@ -220,7 +258,7 @@
 .make-catalog .pagination-info { display: flex; justify-content: space-between; align-items: center; width: 100%; }
 .make-catalog .results-count { font-size: 14px; color: var(--color-text-muted); font-weight: 500; order: 2; }
 .make-catalog .page-size-selector { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--color-text-secondary); order: 1; }
-.make-catalog .page-size-selector select { height: 36px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); padding: 0 32px 0 12px; font-size: 14px; font-weight: 600; color: var(--color-text-main); appearance: none; cursor: pointer; outline: none; background: var(--color-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231A1B22' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center; }
+.make-catalog .page-size-selector select { height: 36px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); padding: 0 32px 0 12px; font-size: 14px; font-weight: 600; color: var(--color-text-main); appearance: none; cursor: pointer; outline: none; background: var(--color-white) var(--select-arrow, none) no-repeat right 12px center; }
 .make-catalog .pagination { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
 .make-catalog .pagination-btn { min-width: 40px; height: 40px; padding: 0 12px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-white); font-size: 14px; font-weight: 600; color: var(--color-text-main); cursor: pointer; transition: all .18s; display: flex; align-items: center; justify-content: center; }
 .make-catalog .pagination-btn:hover:not(:disabled) { border-color: var(--color-primary); background: var(--color-primary-bg); }
@@ -232,12 +270,12 @@
    7. SKELETON LOADERS
 ================================================================ */
 .make-catalog .skeleton-card { background: var(--color-white); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-card); display: flex; flex-direction: column; }
-.make-catalog .skeleton-image { aspect-ratio: 16 / 10; background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
+.make-catalog .skeleton-image { aspect-ratio: 16 / 10; background: linear-gradient(90deg, var(--color-border) 25%, var(--color-bg-main) 50%, var(--color-border) 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
 .make-catalog .skeleton-content { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-.make-catalog .skeleton-line { height: 14px; border-radius: 5px; background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
+.make-catalog .skeleton-line { height: 14px; border-radius: 5px; background: linear-gradient(90deg, var(--color-border) 25%, var(--color-bg-main) 50%, var(--color-border) 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
 .make-catalog .skeleton-line.title { height: 20px; width: 70%; }
 .make-catalog .skeleton-line.price { height: 24px; width: 40%; margin-top: auto; }
-.make-catalog .skeleton-btn { height: 44px; border-radius: var(--radius-sm); margin-top: 14px; background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
+.make-catalog .skeleton-btn { height: 44px; border-radius: var(--radius-sm); margin-top: 14px; background: linear-gradient(90deg, var(--color-border) 25%, var(--color-bg-main) 50%, var(--color-border) 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
 @keyframes make-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
 /* ================================================================
@@ -267,7 +305,6 @@
 }
 .make-catalog .modal-overlay.visible .modal-box { transform: translateY(0) scale(1); }
 
-/* Высчитываем точную ширину колонок с учетом резинового gap */
 .make-catalog .modal-left { 
   width: calc(55% - (clamp(24px, 3vw, 48px) / 2)); 
   background: transparent; display: flex; flex-direction: column; 
@@ -278,6 +315,7 @@
   display: flex; flex-direction: column; overflow: hidden; 
 }
 
+/* Крестик закрытия */
 .make-catalog .modal-close {
   position: absolute; top: clamp(16px, 2vw, 32px); right: clamp(16px, 2vw, 32px); 
   width: clamp(36px, 3vw, 44px); height: clamp(36px, 3vw, 44px);
@@ -285,9 +323,9 @@
   font-size: clamp(18px, 1.5vw, 22px); color: var(--color-text-muted); cursor: pointer;
   display: flex; align-items: center; justify-content: center; z-index: 20; transition: all .2s;
 }
-.make-catalog .modal-close:hover { background: #E4E6F0; color: var(--color-text-main); transform: scale(1.05); }
+.make-catalog .modal-close:hover { background: var(--color-border); color: var(--color-text-main); transform: scale(1.05); }
 
-/* ГАЛЕРЕЯ */
+/* ГАЛЕРЕЯ (Адаптация кнопок к Dark Mode) */
 .make-catalog .modal-gallery { flex: 1; position: relative; width: 100%; overflow: hidden; border-radius: clamp(12px, 1.5vw, 20px); background: var(--color-bg-main); }
 .make-catalog .modal-gallery-track {
   display: flex; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; overflow-x: hidden; 
@@ -299,16 +337,16 @@
 .make-catalog .modal-nav-prev, .make-catalog .modal-nav-next {
   position: absolute; right: clamp(12px, 1.5vw, 24px); 
   width: clamp(40px, 3.5vw, 56px); height: clamp(40px, 3.5vw, 56px);
-  background: rgba(255, 255, 255, 0.95); border: none; border-radius: 50%;
+  background: var(--color-panel-bg); border: none; border-radius: 50%;
   cursor: pointer; display: flex; align-items: center; justify-content: center; 
-  transition: transform .2s; box-shadow: 0 4px 12px rgba(0,0,0,.15); color: var(--color-text-main); z-index: 10;
+  transition: transform .2s, background .2s; box-shadow: 0 4px 12px rgba(0,0,0,.15); color: var(--color-text-main); z-index: 10;
 }
 .make-catalog .modal-nav-prev svg, .make-catalog .modal-nav-next svg { width: clamp(20px, 2vw, 28px); height: clamp(20px, 2vw, 28px); }
 .make-catalog .modal-nav-prev { bottom: clamp(60px, 7vw, 96px); } 
 .make-catalog .modal-nav-next { bottom: clamp(12px, 1.5vw, 24px); } 
-.make-catalog .modal-nav-prev:hover, .make-catalog .modal-nav-next:hover { transform: scale(1.08); background: #FFF; }
+.make-catalog .modal-nav-prev:hover, .make-catalog .modal-nav-next:hover { transform: scale(1.08); background: var(--color-white); }
 
-.make-catalog .modal-counter { position: absolute; top: clamp(12px, 1.5vw, 24px); left: clamp(12px, 1.5vw, 24px); background: rgba(26,27,34,.7); color: #FFF; padding: 4px 12px; border-radius: 12px; font-size: clamp(11px, 1vw, 14px); font-weight: 700; backdrop-filter: blur(4px); }
+.make-catalog .modal-counter { position: absolute; top: clamp(12px, 1.5vw, 24px); left: clamp(12px, 1.5vw, 24px); background: var(--color-text-main); color: var(--color-bg-main); padding: 4px 12px; border-radius: 12px; font-size: clamp(11px, 1vw, 14px); font-weight: 700; backdrop-filter: blur(4px); }
 .make-catalog .modal-thumbs { display: flex; gap: clamp(6px, 0.8vw, 10px); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .make-catalog .modal-thumbs::-webkit-scrollbar { display: none; }
 .make-catalog .modal-thumb { width: clamp(60px, 6vw, 84px); height: clamp(44px, 4.5vw, 64px); border-radius: 8px; overflow: hidden; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; transition: border-color .2s; opacity: 0.6; }
@@ -316,15 +354,15 @@
 .make-catalog .modal-thumb.is-active { border-color: var(--color-text-main); opacity: 1; }
 .make-catalog .modal-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-/* ПРАВАЯ ЧАСТЬ - УМНАЯ СТРУКТУРА С РЕЗИНОВЫМ ШРИФТОМ */
+/* ПРАВАЯ ЧАСТЬ - ТЕКСТ, ЛЕЙБЛЫ И КРЕДИТ */
 .make-catalog .modal-right-content { 
   flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; 
   padding: 0 clamp(16px, 2vw, 32px) clamp(100px, 12vh, 140px) 0; 
 }
 .make-catalog .modal-right-content::-webkit-scrollbar { display: none; }
 
-.make-catalog .modal-status { font-size: clamp(10px, 1vw, 12px); color: #00B35A; font-weight: 800; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-.make-catalog .status-dot { width: 6px; height: 6px; background: #00B35A; border-radius: 50%; }
+.make-catalog .modal-status { font-size: clamp(10px, 1vw, 12px); color: var(--color-primary); font-weight: 800; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.make-catalog .status-dot { width: 6px; height: 6px; background: var(--color-primary); border-radius: 50%; }
 .make-catalog .modal-title { font-family: var(--font-d); font-size: clamp(26px, 3vw, 42px); font-weight: 800; line-height: 1.1; margin-bottom: clamp(12px, 1.5vh, 20px); color: var(--color-text-main); }
 .make-catalog .modal-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: clamp(20px, 2.5vh, 32px); }
 .make-catalog .modal-pills .ctag { background: var(--color-bg-main); font-size: clamp(11px, 1vw, 13px); font-weight: 600; padding: 6px 12px; border-radius: 6px; color: var(--color-text-main); }
@@ -333,12 +371,13 @@
 .make-catalog .modal-price-block { margin-bottom: clamp(24px, 3vh, 40px); }
 .make-catalog .modal-price { font-family: var(--font-d); font-size: clamp(32px, 3.5vw, 52px); font-weight: 800; color: var(--color-text-main); line-height: 1; }
 .make-catalog .modal-price-old { font-size: clamp(18px, 2vw, 24px); font-weight: 500; color: var(--color-text-muted); text-decoration: line-through; }
-.make-catalog .modal-discount-badge { display: inline-block; background: #FFF0F2; color: #FF3B30; font-size: clamp(11px, 1.1vw, 14px); padding: 6px 12px; margin-top: 8px; border-radius: 6px; font-weight: 700; font-family: var(--font-b); }
+.make-catalog .modal-discount-badge { display: inline-block; background: rgba(255, 59, 48, 0.15); color: #FF3B30; font-size: clamp(11px, 1.1vw, 14px); padding: 6px 12px; margin-top: 8px; border-radius: 6px; font-weight: 700; font-family: var(--font-b); }
 
-.make-catalog .modal-credit-block { background: #FFF9E6; border-radius: clamp(8px, 1vw, 16px); padding: clamp(16px, 2vw, 24px); display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: clamp(24px, 3vh, 40px); border: none; }
+/* Блок кредита - адаптация под Dark Mode и Primary Color */
+.make-catalog .modal-credit-block { background: var(--color-primary-bg); border-radius: clamp(8px, 1vw, 16px); padding: clamp(16px, 2vw, 24px); display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: clamp(24px, 3vh, 40px); border: none; }
 .make-catalog .modal-credit-label { font-size: clamp(10px, 1vw, 12px); font-weight: 800; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: 4px; }
 .make-catalog .modal-credit-value { font-family: var(--font-d); font-size: clamp(14px, 1.5vw, 18px); font-weight: 800; color: var(--color-text-main); }
-.make-catalog .modal-calc-btn { padding: 10px 20px; background: var(--color-white); border: none; border-radius: 8px; font-size: clamp(12px, 1vw, 14px); font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.05); color: var(--color-text-main); display: flex; align-items: center; justify-content: center;}
+.make-catalog .modal-calc-btn { padding: 10px 20px; background: var(--color-bg-main); border: none; border-radius: 8px; font-size: clamp(12px, 1vw, 14px); font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.05); color: var(--color-text-main); display: flex; align-items: center; justify-content: center;}
 
 .make-catalog .modal-section-title { font-family: var(--font-d); font-size: clamp(16px, 1.8vw, 22px); font-weight: 800; margin-bottom: clamp(16px, 2vh, 24px); padding-bottom: 12px; border-bottom: 1px solid var(--color-border); color: var(--color-text-main); }
 .make-catalog .modal-specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(16px, 2vh, 24px) 16px; margin-bottom: clamp(32px, 4vh, 48px); }
@@ -347,11 +386,11 @@
 .make-catalog .modal-spec-value { font-size: clamp(13px, 1.2vw, 16px); font-weight: 800; color: var(--color-text-main); }
 .make-catalog .modal-description { font-size: clamp(13px, 1.2vw, 16px); line-height: 1.6; color: var(--color-text-secondary); white-space: pre-wrap; padding-bottom: 40px;}
 
-/* ПАНЕЛЬ КНОПОК - РЕЗИНОВАЯ ШИРИНА И ФИКСАЦИЯ ВНИЗУ */
+/* ПАНЕЛЬ КНОПОК - Адаптация под Dark Mode */
 .make-catalog .modal-box .modal-action-bar { 
   position: absolute; bottom: clamp(20px, 2.5vw, 40px); right: clamp(20px, 2.5vw, 40px);
   width: calc(45% - (clamp(24px, 3vw, 48px) / 2));
-  padding: clamp(16px, 2vh, 24px) 0 0 0; background: rgba(255, 255, 255, 0.98); 
+  padding: clamp(16px, 2vh, 24px) 0 0 0; background: var(--color-panel-bg); 
   display: flex; align-items: center; gap: clamp(8px, 1vw, 16px); z-index: 10;
   border-top: 1px solid var(--color-border);
 }
@@ -360,11 +399,11 @@
 .make-catalog .modal-action-bar a:last-child { flex: 0 0 clamp(48px, 6vh, 64px); }
 
 .make-catalog .modal-apply-btn { 
-  width: 100%; height: clamp(48px, 6vh, 64px); background: var(--color-text-main); color: var(--color-white) !important; 
+  width: 100%; height: clamp(48px, 6vh, 64px); background: var(--color-primary); color: var(--color-primary-text) !important; 
   border-radius: 8px; font-size: clamp(14px, 1.2vw, 16px); font-weight: 700; display: flex; align-items: center; justify-content: center; 
-  text-decoration: none; padding: 0 24px; box-sizing: border-box; white-space: nowrap; transition: background .2s; 
+  text-decoration: none; padding: 0 24px; box-sizing: border-box; white-space: nowrap; transition: background .2s, transform .2s; 
 }
-.make-catalog .modal-apply-btn:hover { background: #000; transform: translateY(-2px); }
+.make-catalog .modal-apply-btn:hover { background: var(--color-primary-hover); transform: translateY(-2px); }
 
 .make-catalog .modal-phone-btn { 
   width: clamp(48px, 6vh, 64px); height: clamp(48px, 6vh, 64px); border: 1.5px solid var(--color-border); border-radius: 8px; 
@@ -385,11 +424,16 @@
 @media (max-width: 900px) {
   .make-catalog[data-filter-layout="vertical"] .catalog-wrap,
   .make-catalog[data-filter-layout="horizontal"] .catalog-wrap { grid-template-columns: 1fr; display: flex; padding: 16px 20px; }
+  
+  .make-catalog[data-filter-layout="showcase"] .catalog-wrap { padding: 48px 20px; }
+  .make-catalog[data-filter-layout="showcase"] .cards-container::before { margin-bottom: 32px; }
+  .make-catalog[data-filter-layout="showcase"] .car-grid { grid-template-columns: 1fr; gap: 24px; }
+  
   .make-catalog .sidebar { display: none; }
   .make-catalog .catalog-top-bar { margin-bottom: 16px; gap: 12px; }
-  .make-catalog .btn-mob-filter { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-white); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .make-catalog .btn-mob-filter { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-white); font-size: 13px; font-weight: 600; cursor: pointer; color: var(--color-text-main); }
   
-  /* МОБИЛЬНОЕ МОДАЛЬНОЕ ОКНО - ОБНУЛЯЕМ РЕЗИНУ ДЛЯ СМАРТФОНОВ */
+  /* МОБИЛЬНОЕ МОДАЛЬНОЕ ОКНО */
   .make-catalog .modal-overlay { padding: 0; align-items: flex-end; }
   .make-catalog .modal-box { flex-direction: column; height: 95vh; border-radius: 20px 20px 0 0; padding: 0; gap: 0; position: relative; width: 100%; max-width: none; }
   .make-catalog .modal-left { width: 100%; flex: 0 0 auto; gap: 0; padding: 0; }
@@ -410,7 +454,9 @@
   
   .make-catalog .modal-right { width: 100%; flex: 1; padding: 0; }
   .make-catalog .modal-right-content { padding: 24px 20px 24px; }
-  .make-catalog .modal-box .modal-action-bar { position: absolute; bottom: 0; left: 0; right: 0; width: 100%; padding: 16px 20px; border-top: 1px solid var(--color-border); background: #FFF; gap: 12px; }
+  
+  /* Мобильная панель кнопок (Dark Mode Ready) */
+  .make-catalog .modal-box .modal-action-bar { position: absolute; bottom: 0; left: 0; right: 0; width: 100%; padding: 16px 20px; border-top: 1px solid var(--color-border); background: var(--color-panel-bg); gap: 12px; }
   .make-catalog .modal-action-bar a:last-child { flex: 0 0 48px; }
   .make-catalog .modal-apply-btn, .make-catalog .modal-phone-btn { height: 48px; }
   
@@ -424,7 +470,7 @@
   .make-catalog .modal-specs-grid { grid-template-columns: 1fr; gap: 12px; }
 }
 
-/* МОБИЛЬНАЯ ШТОРКА (DRAWER) С УМНЫМ СКРЫТИЕМ */
+/* МОБИЛЬНАЯ ШТОРКА (DRAWER) */
 .make-catalog .mob-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 300; backdrop-filter: blur(2px); }
 .make-catalog .mob-overlay.is-open { display: block; }
 
@@ -438,8 +484,8 @@
 }
 
 .make-catalog .drawer-top { display: flex; align-items: center; justify-content: space-between; padding: 20px; border-bottom: 1px solid var(--color-border); }
-.make-catalog .drawer-title { font-family: var(--font-d); font-size: 18px; font-weight: 800; }
-.make-catalog .btn-close { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: none; border: none; cursor: pointer; color: var(--color-text-muted); }
+.make-catalog .drawer-title { font-family: var(--font-d); font-size: 18px; font-weight: 800; color: var(--color-text-main); }
+.make-catalog .btn-close { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: none; border: none; cursor: pointer; color: var(--color-text-muted); font-size: 24px; }
 .make-catalog .drawer-body { padding: 20px; overflow-y: auto; flex: 1; }
 
 .make-catalog .drawer-body #filters-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px; align-items: end; }
@@ -447,8 +493,56 @@
 .make-catalog .drawer-body .filter-group:has(.toggle-row),
 .make-catalog .drawer-body .filter-group.sort-group { grid-column: 1 / -1; }
 
+
 /* ================================================================
-   11. СОКРАЩЕННЫЙ ВИДЖЕТ (RANDOM BLOCK)
+   11. ЛЕЙАУТ ВИТРИНА (SHOWCASE) - ПРОМО-БЛОК
 ================================================================ */
-.make-catalog[data-make-catalog="random"] .make-random-wrap { max-width: 1440px; margin: 0 auto; padding: 24px 40px; }
+.make-catalog[data-filter-layout="showcase"] .catalog-wrap {
+  max-width: 1440px; 
+  margin: 0 auto; 
+  /* Добавляем много "воздуха" сверху и снизу, чтобы блок смотрелся самостоятельно */
+  padding: 80px 40px; 
+  display: block; 
+}
+
+/* Генерируем заголовок витрины через CSS (без вмешательства в HTML) */
+.make-catalog[data-filter-layout="showcase"] .cards-container::before {
+  content: "Специальные предложения";
+  display: block;
+  font-family: var(--font-d);
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 800;
+  color: var(--color-text-main);
+  text-align: center;
+  margin-bottom: 48px;
+  letter-spacing: -0.5px;
+}
+
+/* Делаем карточки в витрине чуть крупнее и увеличиваем между ними отступы */
+.make-catalog[data-filter-layout="showcase"] .car-grid {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 32px;
+}
+
+/* Если карточек мало, не даем им растянуться на весь экран до состояния гигантов */
+@media (min-width: 1140px) {
+  .make-catalog[data-filter-layout="showcase"] .car-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 400px));
+    justify-content: center; /* Центрируем сетку */
+  }
+}
+
+/* Адаптив витрины для мобильных устройств */
+@media (max-width: 900px) {
+  .make-catalog[data-filter-layout="showcase"] .catalog-wrap {
+    padding: 48px 20px;
+  }
+  .make-catalog[data-filter-layout="showcase"] .cards-container::before {
+    margin-bottom: 32px;
+  }
+  .make-catalog[data-filter-layout="showcase"] .car-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
 </style>
