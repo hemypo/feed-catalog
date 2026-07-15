@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // КОНФИГУРАЦИЯ КАТАЛОГА
     // ==========================================
     const APP_CONFIG = {
+        themeColor: '#FFD100', 
+
         feedUrls: [
             'https://dhost.makeagency.ru/playback/udm-feed.json',
             'http://s3.hommenest.ru/digital/backup/udm-feed.json'
@@ -15,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         filters: [
             { key: 'original_mark_id', type: 'select', label: 'Марка',           enabled: true },
             { key: 'model',            type: 'select', label: 'Модель',          enabled: true, dependsOn: 'original_mark_id' },
-            { key: 'generation',       type: 'select', label: 'Поколение',       enabled: true, dependsOn: 'model' },
+            { key: 'generation',       type: 'select', label: 'Поколение',       enabled: false, dependsOn: 'model' },
             { key: 'price',            type: 'minmax', label: 'Стоимость, ₽',    enabled: true, step: 100000 },
             { key: 'year',             type: 'minmax', label: 'Год выпуска',     enabled: true, step: 1 },
             { key: 'run',              type: 'minmax', label: 'Пробег, км',      enabled: true, step: 10000 },
@@ -28,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'pts',              type: 'select', label: 'ПТС',             enabled: true },
             { key: 'owners_number',    type: 'select', label: 'Владельцев',      enabled: true },
             { key: 'wheel',            type: 'toggle', label: 'Руль',            enabled: true },
-            { key: 'salon',            type: 'select', label: 'Автосалон',       enabled: true }
+            { key: 'salon',            type: 'select', label: 'Автосалон',       enabled: false }
         ]
     };
 
@@ -90,6 +92,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function lockBodyScroll() { document.body.style.paddingRight = getScrollbarWidth() + 'px'; document.body.style.overflow = 'hidden'; }
     function unlockBodyScroll() { document.body.style.paddingRight = ''; document.body.style.overflow = ''; }
+
+    // === МАГИЯ УМНОГО ЦВЕТА (МОНОХРОМ И АВТОКОНТРАСТ) ===
+    function hexToHSL(hex) {
+        hex = hex.replace('#', '');
+        let r = parseInt(hex.substring(0, 2), 16) / 255;
+        let g = parseInt(hex.substring(2, 4), 16) / 255;
+        let b = parseInt(hex.substring(4, 6), 16) / 255;
+        let max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s = 0, l = (max + min) / 2;
+        if (max !== min) {
+            let d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+    }
+
+    function getContrastYIQ(hex) {
+        hex = hex.replace("#", "");
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        return ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    }
+
+    function applySmartTheme(hex) {
+        const { h, s, l } = hexToHSL(hex);
+        const yiq = getContrastYIQ(hex);
+        const safeS = Math.min(s, 40); // Сдерживаем кислотность
+        
+        // Умный автоконтраст для текста на кнопках
+        const btnTextColor = (yiq >= 128) ? `hsl(${h}, ${safeS}%, 15%)` : '#FFFFFF';
+
+        document.querySelectorAll('.make-catalog').forEach(el => {
+            el.style.setProperty('--color-primary', hex);
+            el.style.setProperty('--color-primary-hover', `hsl(${h}, ${s}%, ${Math.max(0, l - 8)}%)`);
+            el.style.setProperty('--color-primary-bg', `hsla(${h}, ${s}%, ${l}%, 0.12)`);
+            el.style.setProperty('--color-primary-text', btnTextColor); 
+
+            el.style.setProperty('--color-bg-main', `hsl(${h}, ${safeS}%, 96%)`);
+            el.style.setProperty('--color-border', `hsl(${h}, ${safeS}%, 88%)`);
+            el.style.setProperty('--color-white', `hsl(${h}, ${Math.min(safeS, 15)}%, 99.5%)`);
+            
+            el.style.setProperty('--color-text-main', `hsl(${h}, ${safeS}%, 16%)`);
+            el.style.setProperty('--color-text-secondary', `hsl(${h}, ${safeS}%, 38%)`);
+            el.style.setProperty('--color-text-muted', `hsl(${h}, ${safeS}%, 60%)`);
+            
+            // Насильно привязываем цвет кредитного блока
+            const creditBlocks = el.querySelectorAll('.modal-credit-block');
+            creditBlocks.forEach(block => { block.style.background = `hsla(${h}, ${s}%, ${l}%, 0.12)`; });
+        });
+    }
 
     function generateSEOLinks() {
         const seoContainer = document.getElementById('seo-links-container');
@@ -255,6 +314,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 rootWrapper.className = 'make-catalog make-catalog-modal-root';
                 rootWrapper.appendChild(this.overlay);
                 document.body.appendChild(rootWrapper);
+                
+                // Обязательно применяем тему к новому корню модалки
+                if (APP_CONFIG.themeColor) applySmartTheme(APP_CONFIG.themeColor); 
             }
 
             this.overlay.querySelector('.modal-close').addEventListener('click', () => this.close());
@@ -909,110 +971,107 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ========== РЕНДЕР КАРТОЧЕК ==========
     function createCardHTML(car) {
-            const imgSrc = (Array.isArray(car.images) && car.images.length) ? car.images[0] : PLACEHOLDER_IMG;
-            const hasCarousel = car.images && car.images.length > 1;
-            
-            // Проверяем наличие скидки
-            const hasDiscount = car.price && car.max_discount > 0;
-            const currentPrice = car.price - (car.max_discount || 0);
-            
-            // Формируем бейджи на фото
-            let badgesHTML = `<span class="badge-stock">В наличии</span>`;
+        const imgSrc = (Array.isArray(car.images) && car.images.length) ? car.images[0] : PLACEHOLDER_IMG;
+        const hasCarousel = car.images && car.images.length > 1;
+        
+        const hasDiscount = car.price && car.max_discount > 0;
+        const currentPrice = car.price - (car.max_discount || 0);
+        
+        let badgesHTML = `<span class="badge-stock">В наличии</span>`;
+        if (hasDiscount) {
+            badgesHTML += `<span class="badge-discount">Скидка</span>`;
+        }
+
+        let priceHTML = '';
+        if (car.price) {
             if (hasDiscount) {
-                badgesHTML += `<span class="badge-discount">Скидка</span>`;
-            }
-
-            // Формируем блок цен
-            let priceHTML = '';
-            if (car.price) {
-                if (hasDiscount) {
-                    priceHTML = `
-                        <span class="price-main price-new">${escapeHtml(formatNum(currentPrice))} ₽</span>
-                        <span class="price-old">${escapeHtml(formatNum(car.price))} ₽</span>
-                    `;
-                } else {
-                    priceHTML = `<span class="price-main price-new">${escapeHtml(formatNum(car.price))} ₽</span>`;
-                }
+                priceHTML = `
+                    <span class="price-main price-new">${escapeHtml(formatNum(currentPrice))} ₽</span>
+                    <span class="price-old">${escapeHtml(formatNum(car.price))} ₽</span>
+                `;
             } else {
-                priceHTML = `<span class="price-main price-new">Цена по запросу</span>`;
+                priceHTML = `<span class="price-main price-new">${escapeHtml(formatNum(car.price))} ₽</span>`;
             }
-            
-            return `
-                <div class="car-card product-card" data-id="${escapeHtml(car.id)}">
-                    <div class="card-img-wrap image-container">
-                        <img data-src="${escapeHtml(imgSrc)}" alt="${escapeHtml(car.mark_id)}" loading="lazy" class="lazy-image" data-idx="0">
-                        <div class="img-badges">${badgesHTML}</div>
-                        ${hasCarousel ? `<button class="carousel-button prev" aria-label="Назад"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="carousel-button next" aria-label="Вперед"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></button>` : ''}
-                    </div>
-                    <div class="card-body card-content">
-                        <h3 class="card-name card-title">${escapeHtml(car.mark_id)}</h3>
-                        <div class="card-tags card-specs">
-                            ${car.year ? `<span class="ctag spec-value">${escapeHtml(car.year)} год</span>` : ''}
-                            ${car.run ? `<span class="ctag spec-value">${escapeHtml(formatNum(car.run))} км</span>` : ''}
-                            ${car.gearbox ? `<span class="ctag spec-value">${escapeHtml(car.gearbox)}</span>` : ''}
-                        </div>
-                        <div class="card-pricing card-price">
-                            ${priceHTML}
-                        </div>
-                        <div class="card-btns card-buttons">
-                            <a href="#popup:model" class="card-btn btn-outline" data-car-title="${escapeHtml(car.mark_id)}">Оставить заявку</a>
-                        </div>
-                    </div>
-                </div>`;
+        } else {
+            priceHTML = `<span class="price-main price-new">Цена по запросу</span>`;
         }
+        
+        return `
+            <div class="car-card product-card" data-id="${escapeHtml(car.id)}">
+                <div class="card-img-wrap image-container">
+                    <img data-src="${escapeHtml(imgSrc)}" alt="${escapeHtml(car.mark_id)}" loading="lazy" class="lazy-image" data-idx="0">
+                    <div class="img-badges">${badgesHTML}</div>
+                    ${hasCarousel ? `<button class="carousel-button prev" aria-label="Назад"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="carousel-button next" aria-label="Вперед"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></button>` : ''}
+                </div>
+                <div class="card-body card-content">
+                    <h3 class="card-name card-title">${escapeHtml(car.mark_id)}</h3>
+                    <div class="card-tags card-specs">
+                        ${car.year ? `<span class="ctag spec-value">${escapeHtml(car.year)} год</span>` : ''}
+                        ${car.run ? `<span class="ctag spec-value">${escapeHtml(formatNum(car.run))} км</span>` : ''}
+                        ${car.gearbox ? `<span class="ctag spec-value">${escapeHtml(car.gearbox)}</span>` : ''}
+                    </div>
+                    <div class="card-pricing card-price">
+                        ${priceHTML}
+                    </div>
+                    <div class="card-btns card-buttons">
+                        <a href="#popup:model" class="card-btn btn-outline" data-car-title="${escapeHtml(car.mark_id)}">Оставить заявку</a>
+                    </div>
+                </div>
+            </div>`;
+    }
 
-        function renderCards(list, container) {
-            if (!container) return;
-            if (!list.length) { container.innerHTML = `<div class="no-results">Ничего не найдено</div>`; return; }
-            container.innerHTML = list.map(car => createCardHTML(car)).join('');
-            
-            if (lazyObserver) lazyObserver.disconnect();
-            
-            lazyObserver = new IntersectionObserver((entries, obs) => {
-                entries.forEach(entry => {
-                    if(entry.isIntersecting) {
-                        const img = entry.target;
-                        img.src = img.dataset.src;
-                        img.classList.remove('lazy-image');
-                        obs.unobserve(img);
-                    }
-                });
-            });
-            
-            container.querySelectorAll('img.lazy-image').forEach(img => lazyObserver.observe(img));
-        }
-
-        function bindGridEvents(container) {
-            if (!container) return;
-            container.addEventListener('click', (e) => {
-                const btnPrev = e.target.closest('.carousel-button.prev');
-                const btnNext = e.target.closest('.carousel-button.next');
-                const leadBtn = e.target.closest('.card-btn');
-                const card = e.target.closest('.car-card');
-
-                if (leadBtn) {
-                    lastLeadCar = { title: leadBtn.dataset.carTitle };
-                    scheduleFillTildaFields(getPopupHook(leadBtn));
-                    return;
-                }
-
-                if (card) {
-                    const car = cars.find(c => String(c.id) === card.dataset.id);
-                    if (!car) return;
-                    
-                    if (btnPrev || btnNext) {
-                        e.stopPropagation(); e.preventDefault();
-                        const img = card.querySelector('img');
-                        let idx = parseInt(img.dataset.idx || 0, 10);
-                        idx = btnPrev ? (idx - 1 + car.images.length) % car.images.length : (idx + 1) % car.images.length;
-                        img.dataset.idx = idx;
-                        img.src = car.images[idx];
-                    } else {
-                        carDetailModal.open(car);
-                    }
+    function renderCards(list, container) {
+        if (!container) return;
+        if (!list.length) { container.innerHTML = `<div class="no-results">Ничего не найдено</div>`; return; }
+        container.innerHTML = list.map(car => createCardHTML(car)).join('');
+        
+        if (lazyObserver) lazyObserver.disconnect();
+        
+        lazyObserver = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+                if(entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.classList.remove('lazy-image');
+                    obs.unobserve(img);
                 }
             });
-        }
+        });
+        
+        container.querySelectorAll('img.lazy-image').forEach(img => lazyObserver.observe(img));
+    }
+
+    function bindGridEvents(container) {
+        if (!container) return;
+        container.addEventListener('click', (e) => {
+            const btnPrev = e.target.closest('.carousel-button.prev');
+            const btnNext = e.target.closest('.carousel-button.next');
+            const leadBtn = e.target.closest('.card-btn');
+            const card = e.target.closest('.car-card');
+
+            if (leadBtn) {
+                lastLeadCar = { title: leadBtn.dataset.carTitle };
+                scheduleFillTildaFields(getPopupHook(leadBtn));
+                return;
+            }
+
+            if (card) {
+                const car = cars.find(c => String(c.id) === card.dataset.id);
+                if (!car) return;
+                
+                if (btnPrev || btnNext) {
+                    e.stopPropagation(); e.preventDefault();
+                    const img = card.querySelector('img');
+                    let idx = parseInt(img.dataset.idx || 0, 10);
+                    idx = btnPrev ? (idx - 1 + car.images.length) % car.images.length : (idx + 1) % car.images.length;
+                    img.dataset.idx = idx;
+                    img.src = car.images[idx];
+                } else {
+                    carDetailModal.open(car);
+                }
+            }
+        });
+    }
 
     bindGridEvents(FDOM.cardsContainer);
     bindGridEvents(FDOM.randomGrid);
@@ -1156,6 +1215,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
         D.debugInfo('INIT', 'Дебаггер подключен. Введите makeCatalogDebug.dump() в консоль.');
+    }
+
+    // === ПРИМЕНЕНИЕ ТЕМЫ ПРИ ЗАГРУЗКЕ ===
+    if (APP_CONFIG.themeColor) {
+        applySmartTheme(APP_CONFIG.themeColor);
     }
     
     loadCarsData();

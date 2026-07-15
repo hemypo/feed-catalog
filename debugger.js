@@ -1,4 +1,5 @@
-/**
+<script>
+    /**
  * MAKE CATALOG DEBUGGER (Standalone)
  * Подключите этот скрипт ВЫШЕ основного script.js при отладке
  */
@@ -102,3 +103,4 @@
         debugCheck, debugTable, debugWrap, debugWrapPrototype
     };
 })();
+</script>
