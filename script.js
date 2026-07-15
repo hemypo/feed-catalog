@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const APP_CONFIG = {
         feedUrls: [
-            'https://dhost.makeagency.ru/playback/test-catalog-feed.json',
-            'http://s3.hommenest.ru/digital/backup/test-catalog-feed.json'
+            'https://dhost.makeagency.ru/playback/udm-feed.json',
+            'http://s3.hommenest.ru/digital/backup/udm-feed.json'
         ],
         cacheName: 'make_catalog_cache',
         cacheTTL: 25 * 60 * 1000, 
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         filters: [
             { key: 'original_mark_id', type: 'select', label: 'Марка',           enabled: true },
             { key: 'model',            type: 'select', label: 'Модель',          enabled: true, dependsOn: 'original_mark_id' },
-            { key: 'generation',       type: 'select', label: 'Поколение',       enabled: false, dependsOn: 'model' },
+            { key: 'generation',       type: 'select', label: 'Поколение',       enabled: true, dependsOn: 'model' },
             { key: 'price',            type: 'minmax', label: 'Стоимость, ₽',    enabled: true, step: 100000 },
             { key: 'year',             type: 'minmax', label: 'Год выпуска',     enabled: true, step: 1 },
             { key: 'run',              type: 'minmax', label: 'Пробег, км',      enabled: true, step: 10000 },
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'pts',              type: 'select', label: 'ПТС',             enabled: true },
             { key: 'owners_number',    type: 'select', label: 'Владельцев',      enabled: true },
             { key: 'wheel',            type: 'toggle', label: 'Руль',            enabled: true },
-            { key: 'salon',            type: 'select', label: 'Автосалон',       enabled: false }
+            { key: 'salon',            type: 'select', label: 'Автосалон',       enabled: true }
         ]
     };
 
@@ -909,86 +909,110 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ========== РЕНДЕР КАРТОЧЕК ==========
     function createCardHTML(car) {
-        const imgSrc = (Array.isArray(car.images) && car.images.length) ? car.images[0] : PLACEHOLDER_IMG;
-        const hasCarousel = car.images && car.images.length > 1;
-        const currentPrice = car.price - car.max_discount;
-        
-        return `
-            <div class="car-card product-card" data-id="${escapeHtml(car.id)}">
-                <div class="card-img-wrap image-container">
-                    <img data-src="${escapeHtml(imgSrc)}" alt="${escapeHtml(car.mark_id)}" loading="lazy" class="lazy-image" data-idx="0">
-                    <div class="img-badges"><span class="badge-stock">В наличии</span></div>
-                    ${hasCarousel ? `<button class="carousel-button prev" aria-label="Назад"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="carousel-button next" aria-label="Вперед"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></button>` : ''}
-                </div>
-                <div class="card-body card-content">
-                    <h3 class="card-name card-title">${escapeHtml(car.mark_id)}</h3>
-                    <div class="card-tags card-specs">
-                        ${car.year ? `<span class="ctag spec-value">${escapeHtml(car.year)} год</span>` : ''}
-                        ${car.run ? `<span class="ctag spec-value">${escapeHtml(formatNum(car.run))} км</span>` : ''}
-                        ${car.gearbox ? `<span class="ctag spec-value">${escapeHtml(car.gearbox)}</span>` : ''}
-                    </div>
-                    <div class="card-pricing card-price">
-                        <span class="price-main price-new">${car.price ? escapeHtml(formatNum(currentPrice)) + ' ₽' : 'Цена по запросу'}</span>
-                    </div>
-                    <div class="card-btns card-buttons">
-                        <a href="#popup:model" class="card-btn btn-outline" data-car-title="${escapeHtml(car.mark_id)}">Оставить заявку</a>
-                    </div>
-                </div>
-            </div>`;
-    }
+            const imgSrc = (Array.isArray(car.images) && car.images.length) ? car.images[0] : PLACEHOLDER_IMG;
+            const hasCarousel = car.images && car.images.length > 1;
+            
+            // Проверяем наличие скидки
+            const hasDiscount = car.price && car.max_discount > 0;
+            const currentPrice = car.price - (car.max_discount || 0);
+            
+            // Формируем бейджи на фото
+            let badgesHTML = `<span class="badge-stock">В наличии</span>`;
+            if (hasDiscount) {
+                badgesHTML += `<span class="badge-discount">Скидка</span>`;
+            }
 
-    function renderCards(list, container) {
-        if (!container) return;
-        if (!list.length) { container.innerHTML = `<div class="no-results">Ничего не найдено</div>`; return; }
-        container.innerHTML = list.map(car => createCardHTML(car)).join('');
-        
-        if (lazyObserver) lazyObserver.disconnect();
-        
-        lazyObserver = new IntersectionObserver((entries, obs) => {
-            entries.forEach(entry => {
-                if(entry.isIntersecting) {
-                    const img = entry.target;
-                    img.src = img.dataset.src;
-                    img.classList.remove('lazy-image');
-                    obs.unobserve(img);
+            // Формируем блок цен
+            let priceHTML = '';
+            if (car.price) {
+                if (hasDiscount) {
+                    priceHTML = `
+                        <span class="price-main price-new">${escapeHtml(formatNum(currentPrice))} ₽</span>
+                        <span class="price-old">${escapeHtml(formatNum(car.price))} ₽</span>
+                    `;
+                } else {
+                    priceHTML = `<span class="price-main price-new">${escapeHtml(formatNum(car.price))} ₽</span>`;
+                }
+            } else {
+                priceHTML = `<span class="price-main price-new">Цена по запросу</span>`;
+            }
+            
+            return `
+                <div class="car-card product-card" data-id="${escapeHtml(car.id)}">
+                    <div class="card-img-wrap image-container">
+                        <img data-src="${escapeHtml(imgSrc)}" alt="${escapeHtml(car.mark_id)}" loading="lazy" class="lazy-image" data-idx="0">
+                        <div class="img-badges">${badgesHTML}</div>
+                        ${hasCarousel ? `<button class="carousel-button prev" aria-label="Назад"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="carousel-button next" aria-label="Вперед"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></button>` : ''}
+                    </div>
+                    <div class="card-body card-content">
+                        <h3 class="card-name card-title">${escapeHtml(car.mark_id)}</h3>
+                        <div class="card-tags card-specs">
+                            ${car.year ? `<span class="ctag spec-value">${escapeHtml(car.year)} год</span>` : ''}
+                            ${car.run ? `<span class="ctag spec-value">${escapeHtml(formatNum(car.run))} км</span>` : ''}
+                            ${car.gearbox ? `<span class="ctag spec-value">${escapeHtml(car.gearbox)}</span>` : ''}
+                        </div>
+                        <div class="card-pricing card-price">
+                            ${priceHTML}
+                        </div>
+                        <div class="card-btns card-buttons">
+                            <a href="#popup:model" class="card-btn btn-outline" data-car-title="${escapeHtml(car.mark_id)}">Оставить заявку</a>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function renderCards(list, container) {
+            if (!container) return;
+            if (!list.length) { container.innerHTML = `<div class="no-results">Ничего не найдено</div>`; return; }
+            container.innerHTML = list.map(car => createCardHTML(car)).join('');
+            
+            if (lazyObserver) lazyObserver.disconnect();
+            
+            lazyObserver = new IntersectionObserver((entries, obs) => {
+                entries.forEach(entry => {
+                    if(entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src;
+                        img.classList.remove('lazy-image');
+                        obs.unobserve(img);
+                    }
+                });
+            });
+            
+            container.querySelectorAll('img.lazy-image').forEach(img => lazyObserver.observe(img));
+        }
+
+        function bindGridEvents(container) {
+            if (!container) return;
+            container.addEventListener('click', (e) => {
+                const btnPrev = e.target.closest('.carousel-button.prev');
+                const btnNext = e.target.closest('.carousel-button.next');
+                const leadBtn = e.target.closest('.card-btn');
+                const card = e.target.closest('.car-card');
+
+                if (leadBtn) {
+                    lastLeadCar = { title: leadBtn.dataset.carTitle };
+                    scheduleFillTildaFields(getPopupHook(leadBtn));
+                    return;
+                }
+
+                if (card) {
+                    const car = cars.find(c => String(c.id) === card.dataset.id);
+                    if (!car) return;
+                    
+                    if (btnPrev || btnNext) {
+                        e.stopPropagation(); e.preventDefault();
+                        const img = card.querySelector('img');
+                        let idx = parseInt(img.dataset.idx || 0, 10);
+                        idx = btnPrev ? (idx - 1 + car.images.length) % car.images.length : (idx + 1) % car.images.length;
+                        img.dataset.idx = idx;
+                        img.src = car.images[idx];
+                    } else {
+                        carDetailModal.open(car);
+                    }
                 }
             });
-        });
-        
-        container.querySelectorAll('img.lazy-image').forEach(img => lazyObserver.observe(img));
-    }
-
-    function bindGridEvents(container) {
-        if (!container) return;
-        container.addEventListener('click', (e) => {
-            const btnPrev = e.target.closest('.carousel-button.prev');
-            const btnNext = e.target.closest('.carousel-button.next');
-            const leadBtn = e.target.closest('.card-btn');
-            const card = e.target.closest('.car-card');
-
-            if (leadBtn) {
-                lastLeadCar = { title: leadBtn.dataset.carTitle };
-                scheduleFillTildaFields(getPopupHook(leadBtn));
-                return;
-            }
-
-            if (card) {
-                const car = cars.find(c => String(c.id) === card.dataset.id);
-                if (!car) return;
-                
-                if (btnPrev || btnNext) {
-                    e.stopPropagation(); e.preventDefault();
-                    const img = card.querySelector('img');
-                    let idx = parseInt(img.dataset.idx || 0, 10);
-                    idx = btnPrev ? (idx - 1 + car.images.length) % car.images.length : (idx + 1) % car.images.length;
-                    img.dataset.idx = idx;
-                    img.src = car.images[idx];
-                } else {
-                    carDetailModal.open(car);
-                }
-            }
-        });
-    }
+        }
 
     bindGridEvents(FDOM.cardsContainer);
     bindGridEvents(FDOM.randomGrid);
