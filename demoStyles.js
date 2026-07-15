@@ -1,11 +1,10 @@
 <script>
-   (function () {
+    (function () {
     // ==========================================
-    // 1. СТИЛИ ДЕМО-ПАНЕЛИ (Светлый премиум UX)
+    // 1. СТИЛИ ДЕМО-ПАНЕЛИ
     // ==========================================
     const demoStyles = document.createElement('style');
     demoStyles.innerHTML = `
-        /* Кнопка вызова панели */
         .mc-demo-trigger {
             position: fixed; bottom: 32px; right: 32px; height: 56px; padding: 0 24px;
             background: #1A1B22; color: #FFF; border: none; border-radius: 28px;
@@ -17,7 +16,6 @@
         .mc-demo-trigger:hover { transform: translateY(-4px); box-shadow: 0 16px 32px rgba(26,27,34,0.4); }
         .mc-demo-trigger svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; }
 
-        /* Сама панель */
         .mc-demo-panel {
             position: fixed; bottom: 100px; right: 32px; width: 340px;
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px);
@@ -30,20 +28,11 @@
         }
         .mc-demo-panel.is-open { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
 
-        /* Шапка панели */
-        .mc-demo-header {
-            padding: 20px 24px; border-bottom: 1px solid rgba(0,0,0,0.06);
-            display: flex; align-items: center; justify-content: space-between;
-        }
+        .mc-demo-header { padding: 20px 24px; border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; }
         .mc-demo-title { font-size: 16px; font-weight: 800; color: #1A1B22; margin: 0; }
-        .mc-demo-close { 
-            width: 32px; height: 32px; background: #F1F3FA; border: none; border-radius: 50%;
-            color: #8B8FA8; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
-        }
+        .mc-demo-close { width: 32px; height: 32px; background: #F1F3FA; border: none; border-radius: 50%; color: #8B8FA8; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
         .mc-demo-close:hover { background: #E4E6F0; color: #1A1B22; }
 
-        /* Тело панели */
         .mc-demo-body { padding: 0; overflow-y: auto; flex: 1; scrollbar-width: none; }
         .mc-demo-body::-webkit-scrollbar { display: none; }
         
@@ -51,36 +40,30 @@
         .mc-demo-section:last-child { border-bottom: none; }
         .mc-demo-label { display: block; font-size: 11px; text-transform: uppercase; font-weight: 800; color: #8B8FA8; margin-bottom: 16px; letter-spacing: 0.5px; }
 
-        /* Элементы управления: Строка */
         .mc-demo-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
         .mc-demo-row:last-child { margin-bottom: 0; }
         .mc-demo-row-text { font-size: 14px; font-weight: 600; color: #1A1B22; }
 
-        /* iOS Switch Toggle */
         .mc-demo-switch { position: relative; width: 44px; height: 24px; background: #E4E6F0; border-radius: 24px; cursor: pointer; transition: 0.3s; display: block; }
         .mc-demo-switch input { display: none; }
         .mc-demo-slider { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #FFF; border-radius: 50%; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .mc-demo-switch input:checked + .mc-demo-slider { transform: translateX(20px); }
         .mc-demo-switch:has(input:checked) { background: #00B35A; }
 
-        /* Селекты и Цвета */
-        .mc-demo-select { 
-            width: 100%; height: 40px; background: #F1F3FA; border: 1px solid transparent; 
-            border-radius: 10px; padding: 0 12px; font-family: inherit; font-size: 13px; font-weight: 600; 
-            color: #1A1B22; outline: none; cursor: pointer; margin-bottom: 16px;
-        }
+        .mc-demo-select { width: 100%; height: 40px; background: #F1F3FA; border: 1px solid transparent; border-radius: 10px; padding: 0 12px; font-family: inherit; font-size: 13px; font-weight: 600; color: #1A1B22; outline: none; cursor: pointer; margin-bottom: 16px; }
         .mc-demo-select:focus { border-color: #1A1B22; }
 
-        .mc-demo-color-picker { 
-            width: 32px; height: 32px; border: none; border-radius: 8px; cursor: pointer; padding: 0; background: transparent; 
-        }
+        .mc-demo-input { width: 70px; height: 32px; background: #F1F3FA; border: 1px solid transparent; border-radius: 8px; text-align: center; font-family: inherit; font-size: 13px; font-weight: 700; color: #1A1B22; outline: none; transition: 0.2s; }
+        .mc-demo-input:focus { border-color: #1A1B22; }
+
+        .mc-demo-color-picker { width: 32px; height: 32px; border: none; border-radius: 8px; cursor: pointer; padding: 0; background: transparent; }
         .mc-demo-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
         .mc-demo-color-picker::-webkit-color-swatch { border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; }
     `;
     document.head.appendChild(demoStyles);
 
     // ==========================================
-    // 2. ДИНАМИЧЕСКИЙ CSS ДЛЯ ФУНКЦИЙ КАТАЛОГА
+    // 2. ДИНАМИЧЕСКИЙ CSS ДЛЯ ФУНКЦИЙ
     // ==========================================
     const dynamicFeaturesStyle = document.createElement('style');
     dynamicFeaturesStyle.id = 'mc-demo-dynamic-styles';
@@ -88,16 +71,12 @@
 
     function updateDynamicStyles() {
         let css = '';
-        if (!document.getElementById('demo-tog-credit').checked) {
-            css += `.modal-credit-block { display: none !important; }`;
-        }
+        if (!document.getElementById('demo-tog-credit').checked) css += `.modal-credit-block, .card-btn-credit { display: none !important; }`;
         if (!document.getElementById('demo-tog-discount').checked) {
             css += `.badge-discount, .price-old, .modal-discount-badge, .modal-price-old { display: none !important; }`;
             css += `.modal-price-row { display: block !important; }`;
         }
-        if (!document.getElementById('demo-tog-desc').checked) {
-            css += `#modalDescBlock { display: none !important; }`;
-        }
+        if (!document.getElementById('demo-tog-desc').checked) css += `#modalDescBlock { display: none !important; }`;
         dynamicFeaturesStyle.innerHTML = css;
     }
 
@@ -107,7 +86,7 @@
     const widgetHTML = `
         <button class="mc-demo-trigger" id="mc-demo-trigger">
             <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
-            Возможности виджета
+            Настроить дизайн
         </button>
 
         <div class="mc-demo-panel" id="mc-demo-panel">
@@ -125,13 +104,17 @@
                         <option value="vertical">Сайдбар слева (Вертикально)</option>
                     </select>
                     <div class="mc-demo-row">
-                        <span class="mc-demo-row-text">Фирменный цвет</span>
+                        <span class="mc-demo-row-text">Темная тема</span>
+                        <label class="mc-demo-switch"><input type="checkbox" id="demo-tog-theme"><div class="mc-demo-slider"></div></label>
+                    </div>
+                    <div class="mc-demo-row">
+                        <span class="mc-demo-row-text">Цветовая тема (Умная)</span>
                         <input type="color" class="mc-demo-color-picker" id="demo-color-primary" value="#FFD100">
                     </div>
                 </div>
 
                 <div class="mc-demo-section">
-                    <span class="mc-demo-label">Функции карточек</span>
+                    <span class="mc-demo-label">Отображение</span>
                     <div class="mc-demo-row">
                         <span class="mc-demo-row-text">Показывать скидки</span>
                         <label class="mc-demo-switch"><input type="checkbox" id="demo-tog-discount" checked><div class="mc-demo-slider"></div></label>
@@ -146,11 +129,26 @@
                     </div>
                 </div>
 
+                <div class="mc-demo-section">
+                    <span class="mc-demo-label">Формула кредита</span>
+                    <div class="mc-demo-row">
+                        <span class="mc-demo-row-text">Срок (лет)</span>
+                        <input type="number" id="demo-cr-term" class="mc-demo-input" min="1" max="30">
+                    </div>
+                    <div class="mc-demo-row">
+                        <span class="mc-demo-row-text">Первый взнос (%)</span>
+                        <input type="number" id="demo-cr-dp" class="mc-demo-input" min="0" max="100">
+                    </div>
+                    <div class="mc-demo-row">
+                        <span class="mc-demo-row-text">Наценка (%)</span>
+                        <input type="number" id="demo-cr-markup" class="mc-demo-input" min="0" max="100">
+                    </div>
+                </div>
+
                 <div class="mc-demo-section" id="demo-filters-wrap">
-                    <span class="mc-demo-label">Отображаемые фильтры</span>
+                    <span class="mc-demo-label">Фильтры</span>
                     <div id="demo-filters-loading" style="font-size: 13px; color: #8B8FA8;">Сбор фильтров...</div>
-                    <div id="demo-filters-list">
-                        </div>
+                    <div id="demo-filters-list"></div>
                 </div>
 
             </div>
@@ -165,38 +163,38 @@
     // ==========================================
     const panel = document.getElementById('mc-demo-panel');
     const catalogRoot = document.querySelector('.make-catalog');
+    const colorPicker = document.getElementById('demo-color-primary');
+    const themeToggle = document.getElementById('demo-tog-theme');
+
+    // Инпуты кредита
+    const crTerm = document.getElementById('demo-cr-term');
+    const crDp = document.getElementById('demo-cr-dp');
+    const crMarkup = document.getElementById('demo-cr-markup');
+
+    // Инициализация из APP_CONFIG основного скрипта
+    if (window.makeCatalogConfig) {
+        if (window.makeCatalogConfig.themeColor) colorPicker.value = window.makeCatalogConfig.themeColor;
+        if (window.makeCatalogConfig.themeMode === 'dark') themeToggle.checked = true;
+        
+        if (window.makeCatalogConfig.credit) {
+            crTerm.value = window.makeCatalogConfig.credit.termYears;
+            crDp.value = window.makeCatalogConfig.credit.downPaymentPercent;
+            crMarkup.value = window.makeCatalogConfig.credit.markupPercent;
+        }
+    }
 
     // Открытие/Закрытие
     document.getElementById('mc-demo-trigger').addEventListener('click', () => panel.classList.add('is-open'));
     document.getElementById('mc-demo-close').addEventListener('click', () => panel.classList.remove('is-open'));
 
-    // === НОВАЯ ФУНКЦИЯ: Умный расчет контрастности (YIQ) ===
-    function getContrastTextColor(hexcolor) {
-        // Удаляем решетку, если она есть
-        hexcolor = hexcolor.replace("#", "");
-        // Конвертируем HEX в RGB
-        const r = parseInt(hexcolor.substr(0, 2), 16);
-        const g = parseInt(hexcolor.substr(2, 2), 16);
-        const b = parseInt(hexcolor.substr(4, 2), 16);
-        // Вычисляем воспринимаемую яркость по формуле YIQ
-        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-        
-        // Если цвет светлый (яркость >= 128) - возвращаем темный текст, иначе белый
-        return (yiq >= 128) ? '#1A1B22' : '#FFFFFF';
-    }
+    // Слушатель выбора цвета
+    colorPicker.addEventListener('input', (e) => {
+        if(window.makeCatalogApplyTheme) window.makeCatalogApplyTheme(e.target.value, themeToggle.checked ? 'dark' : 'light');
+    });
 
-    // ИЗМЕНЕНИЕ ЦВЕТА С АВТОКОНТРАСТОМ
-    document.getElementById('demo-color-primary').addEventListener('input', (e) => {
-        const color = e.target.value;
-        const autoTextColor = getContrastTextColor(color); // Считаем цвет текста
-
-        document.querySelectorAll('.make-catalog').forEach(el => {
-            el.style.setProperty('--color-primary', color);
-            el.style.setProperty('--color-primary-hover', color); 
-            el.style.setProperty('--color-primary-bg', color + '20'); 
-            // Передаем автоматически вычисленный цвет текста в новую переменную
-            el.style.setProperty('--color-primary-text', autoTextColor); 
-        });
+    // Слушатель темной темы
+    themeToggle.addEventListener('change', (e) => {
+        if(window.makeCatalogApplyTheme) window.makeCatalogApplyTheme(colorPicker.value, e.target.checked ? 'dark' : 'light');
     });
 
     // Изменение расположения
@@ -207,6 +205,20 @@
     // Слушатели на включение/выключение функциональных блоков
     ['demo-tog-discount', 'demo-tog-credit', 'demo-tog-desc'].forEach(id => {
         document.getElementById(id).addEventListener('change', updateDynamicStyles);
+    });
+
+    // Слушатели живого пересчета кредита
+    ['demo-cr-term', 'demo-cr-dp', 'demo-cr-markup'].forEach(id => {
+        document.getElementById(id).addEventListener('input', (e) => {
+            if (!window.makeCatalogConfig) return;
+            const val = parseFloat(e.target.value) || 0;
+            if (id === 'demo-cr-term') window.makeCatalogConfig.credit.termYears = val;
+            if (id === 'demo-cr-dp') window.makeCatalogConfig.credit.downPaymentPercent = val;
+            if (id === 'demo-cr-markup') window.makeCatalogConfig.credit.markupPercent = val;
+            
+            // Если формула изменилась — просим основной каталог перерисовать цены
+            if (window.makeCatalogReRender) window.makeCatalogReRender();
+        });
     });
 
     // Сбор и рендер переключателей фильтров
@@ -236,21 +248,17 @@
             filtersList.insertAdjacentHTML('beforeend', html);
         });
 
-        // Прячем фильтры в каталоге при выключении
         filtersList.querySelectorAll('input').forEach(input => {
             input.addEventListener('change', (e) => {
                 const targetKey = e.target.dataset.filterTarget;
                 const targetGroup = document.querySelector(`.make-catalog .filter-group[data-key="${targetKey}"]`);
-                if (targetGroup) {
-                    targetGroup.style.display = e.target.checked ? '' : 'none';
-                }
+                if (targetGroup) targetGroup.style.display = e.target.checked ? '' : 'none';
             });
         });
 
         return true;
     }
 
-    // Ожидаем, пока основной script.js загрузит JSON и нарисует фильтры
     const checkInterval = setInterval(() => {
         if (initFiltersToggle()) clearInterval(checkInterval);
     }, 500);

@@ -1,19 +1,33 @@
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
-    // КОНФИГУРАЦИЯ КАТАЛОГА
+    // КОНФИГУРАЦИЯ КАТАЛОГА И КРЕДИТА
     // ==========================================
     const APP_CONFIG = {
-        themeColor: '#FFD100', 
+        themeColor: '#FF3A62', // Фирменный цвет
+        themeMode: 'light',    // 'light' или 'dark'
 
+        // Настройки кредитного калькулятора
+        credit: {
+            termYears: 8,              // Срок кредита в годах
+            downPaymentPercent: 80,    // Первоначальный взнос в %
+            markupPercent: 10          // Наценка автосалона в %
+        },
+
+        //Ссылки для каталога (1 основная, вторая фолбэк)
         feedUrls: [
-            'https://dhost.makeagency.ru/playback/udm-feed.json',
-            'http://s3.hommenest.ru/digital/backup/udm-feed.json'
+            'https://dhost.makeagency.ru/playback/test-catalog-feed.json',
+            'http://s3.hommenest.ru/digital/backup/test-catalog-feed.json'
         ],
+        
         cacheName: 'make_catalog_cache',
         cacheTTL: 25 * 60 * 1000, 
+        
+        // Автоматическая панель фильтров, значение указывает после скольки фильтров будет переведена из вертикальной в горизонтальную
         autoLayoutThreshold: 5, 
         
+        //Настройка панели фильтров
+        //dependsOn показывает зависимость от предыдущего поля
         filters: [
             { key: 'original_mark_id', type: 'select', label: 'Марка',           enabled: true },
             { key: 'model',            type: 'select', label: 'Модель',          enabled: true, dependsOn: 'original_mark_id' },
@@ -34,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
     };
 
+    window.makeCatalogConfig = APP_CONFIG;
+
     const TILDA_CONFIG = {
         modelFieldName: 'Модель',
         popupHooks: ['#popup:model', '#popup:report'],
@@ -43,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
     };
 
-    // ========== DOM КЭШ И ПЕРЕМЕННЫЕ ==========
     const FDOM = {
         cardsContainer: document.getElementById('cards-grid'),
         randomGrid: document.querySelector('[data-make-random-grid]'),
@@ -52,15 +67,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const hasFullCatalog = !!FDOM.cardsContainer;
     const hasRandomCatalog = !!FDOM.randomGrid;
+    
     const randomCatalogLimit = hasRandomCatalog ? Math.max(1, parseInt(FDOM.randomGrid.getAttribute('data-limit') || '9', 10)) : 9;
 
     let cars = [];
     let filteredCars = [];
     let lastLeadCar = null;
     const filterInstances = { multiselects: {} };
-    
     let currentPage = 1;
-    let pageSize = parseInt(document.getElementById('page-size')?.value) || 16; 
+    let pageSize = parseInt(document.getElementById('page-size')?.value) || 16; //Отображение карточек на 1 страницу
     let lazyObserver = null;
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
@@ -93,7 +108,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function lockBodyScroll() { document.body.style.paddingRight = getScrollbarWidth() + 'px'; document.body.style.overflow = 'hidden'; }
     function unlockBodyScroll() { document.body.style.paddingRight = ''; document.body.style.overflow = ''; }
 
-    // === МАГИЯ УМНОГО ЦВЕТА (МОНОХРОМ И АВТОКОНТРАСТ) ===
+    // === РАСЧЕТ КРЕДИТА ===
+    function calculateMonthlyPayment(price) {
+        if (!price || price <= 0) return 0;
+        const conf = APP_CONFIG.credit;
+        const priceWithMarkup = price * (1 + (conf.markupPercent / 100));
+        const downPaymentValue = priceWithMarkup * (conf.downPaymentPercent / 100);
+        const loanAmount = priceWithMarkup - downPaymentValue;
+        const totalMonths = conf.termYears * 12;
+        
+        if (totalMonths <= 0) return Math.round(loanAmount);
+        return Math.ceil(loanAmount / totalMonths);
+    }
+
+    // === РАССЧЁТ ТЕМНОЙ ТЕМЫ И ЦВЕТОВОЙ СХЕМЫ ===
     function hexToHSL(hex) {
         hex = hex.replace('#', '');
         let r = parseInt(hex.substring(0, 2), 16) / 255;
@@ -122,39 +150,63 @@ document.addEventListener('DOMContentLoaded', () => {
         return ((r * 299) + (g * 587) + (b * 114)) / 1000;
     }
 
-    function applySmartTheme(hex) {
+    window.makeCatalogApplyTheme = function(hex, mode = 'light') {
         const { h, s, l } = hexToHSL(hex);
         const yiq = getContrastYIQ(hex);
-        const safeS = Math.min(s, 40); // Сдерживаем кислотность
+        const safeS = Math.min(s, 40); 
         
-        // Умный автоконтраст для текста на кнопках
-        const btnTextColor = (yiq >= 128) ? `hsl(${h}, ${safeS}%, 15%)` : '#FFFFFF';
+        const btnTextColor = (yiq >= 128) ? `hsl(${h},${safeS}%, 15%)` : '#FFFFFF';
+        const arrowColor = mode === 'dark' ? 'FFFFFF' : '1A1B22';
+        const arrowSvg = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23${arrowColor}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
 
         document.querySelectorAll('.make-catalog').forEach(el => {
             el.style.setProperty('--color-primary', hex);
-            el.style.setProperty('--color-primary-hover', `hsl(${h}, ${s}%, ${Math.max(0, l - 8)}%)`);
-            el.style.setProperty('--color-primary-bg', `hsla(${h}, ${s}%, ${l}%, 0.12)`);
+            el.style.setProperty('--color-primary-hover', `hsl(${h}, ${s}\%,${Math.max(0, l - 8)}%)`);
             el.style.setProperty('--color-primary-text', btnTextColor); 
+            el.style.setProperty('--select-arrow', arrowSvg);
 
-            el.style.setProperty('--color-bg-main', `hsl(${h}, ${safeS}%, 96%)`);
-            el.style.setProperty('--color-border', `hsl(${h}, ${safeS}%, 88%)`);
-            el.style.setProperty('--color-white', `hsl(${h}, ${Math.min(safeS, 15)}%, 99.5%)`);
-            
-            el.style.setProperty('--color-text-main', `hsl(${h}, ${safeS}%, 16%)`);
-            el.style.setProperty('--color-text-secondary', `hsl(${h}, ${safeS}%, 38%)`);
-            el.style.setProperty('--color-text-muted', `hsl(${h}, ${safeS}%, 60%)`);
-            
-            // Насильно привязываем цвет кредитного блока
-            const creditBlocks = el.querySelectorAll('.modal-credit-block');
-            creditBlocks.forEach(block => { block.style.background = `hsla(${h}, ${s}%, ${l}%, 0.12)`; });
+            if (mode === 'dark') {
+                el.style.setProperty('--color-primary-bg', `hsla(${h}, ${s}\%,${l}%, 0.2)`);
+                el.style.setProperty('--color-bg-main', `hsl(${h},${safeS}%, 10%)`);
+                el.style.setProperty('--color-border', `hsl(${h},${safeS}%, 20%)`); 
+                el.style.setProperty('--color-white', `hsl(${h},${safeS}%, 14%)`); 
+                el.style.setProperty('--color-panel-bg', `hsla(${h},${safeS}%, 14%, 0.98)`);
+                el.style.setProperty('--color-text-main', `hsl(${h},${safeS}%, 96%)`);
+                el.style.setProperty('--color-text-secondary', `hsl(${h},${safeS}%, 70%)`);
+                el.style.setProperty('--color-text-muted', `hsl(${h},${safeS}%, 50%)`);
+            } else {
+                el.style.setProperty('--color-primary-bg', `hsla(${h}, ${s}\%,${l}%, 0.12)`);
+                el.style.setProperty('--color-bg-main', `hsl(${h},${safeS}%, 96%)`);
+                el.style.setProperty('--color-border', `hsl(${h},${safeS}%, 88%)`);
+                el.style.setProperty('--color-white', `hsl(${h},${Math.min(safeS, 15)}%, 99.5%)`);
+                el.style.setProperty('--color-panel-bg', `hsla(${h},${Math.min(safeS, 15)}%, 99.5%, 0.98)`);
+                el.style.setProperty('--color-text-main', `hsl(${h},${safeS}%, 16%)`);
+                el.style.setProperty('--color-text-secondary', `hsl(${h},${safeS}%, 38%)`);
+                el.style.setProperty('--color-text-muted', `hsl(${h},${safeS}%, 60%)`);
+            }
         });
-    }
+    };
+
+    // Функция перерисовки для Демо-панели
+    window.makeCatalogReRender = function() {
+        renderCardsPage();
+        if (carDetailModal && carDetailModal.isOpen && carDetailModal.currentCar) {
+            const car = carDetailModal.currentCar;
+            const currentPrice = car.price - (car.max_discount || 0);
+            const monthlyPayment = calculateMonthlyPayment(currentPrice);
+            
+            const creditValueEl = document.querySelector('.modal-credit-value');
+            const creditLabelEl = document.querySelector('.modal-credit-label');
+            if (creditValueEl) creditValueEl.textContent = `от ${formatNum(monthlyPayment)} ₽/мес`;
+            if (creditLabelEl) creditLabelEl.textContent = `В КРЕДИТ ДО ${APP_CONFIG.credit.termYears} ЛЕТ`;
+        }
+    };
 
     function generateSEOLinks() {
         const seoContainer = document.getElementById('seo-links-container');
         if (!seoContainer || !cars.length) return;
         const baseUrl = window.location.href.split('?')[0];
-        const html = cars.map(car => `<a href="${baseUrl}?car=${car.id}">${escapeHtml(car.mark_id)} ${escapeHtml(car.year)}</a>`).join(' | ');
+        const html = cars.map(car => `<a href="${baseUrl}?car=${car.id}">${escapeHtml(car.mark_id)}${escapeHtml(car.year)}</a>`).join(' | ');
         seoContainer.innerHTML = html;
     }
 
@@ -308,15 +360,12 @@ document.addEventListener('DOMContentLoaded', () => {
         init() {
             if (!this.overlay) return;
 
-            // ФИКС position: fixed ДЛЯ TILDA
             if (this.overlay.parentNode && !this.overlay.parentNode.classList.contains('make-catalog-modal-root')) {
                 const rootWrapper = document.createElement('div');
                 rootWrapper.className = 'make-catalog make-catalog-modal-root';
                 rootWrapper.appendChild(this.overlay);
                 document.body.appendChild(rootWrapper);
-                
-                // Обязательно применяем тему к новому корню модалки
-                if (APP_CONFIG.themeColor) applySmartTheme(APP_CONFIG.themeColor); 
+                if (APP_CONFIG.themeColor) window.makeCatalogApplyTheme(APP_CONFIG.themeColor, APP_CONFIG.themeMode); 
             }
 
             this.overlay.querySelector('.modal-close').addEventListener('click', () => this.close());
@@ -342,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 idx = Math.max(0, Math.min(idx, this.imagesCount - 1));
-                this.counterEl.textContent = `${idx + 1} / ${this.imagesCount}`;
+                this.counterEl.textContent = `${idx + 1} /${this.imagesCount}`;
                 
                 const thumbs = this.overlay.querySelectorAll('.modal-thumb');
                 thumbs.forEach((t, i) => t.classList.toggle('is-active', i === idx));
@@ -409,13 +458,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.overlay.querySelector('#modalTitle').textContent = car.mark_id;
             
+            // Расчет кредита и обновление блока цены
+            const currentPrice = car.price - (car.max_discount || 0);
+            const monthlyPayment = calculateMonthlyPayment(currentPrice);
+            
+            const creditValueEl = this.overlay.querySelector('.modal-credit-value');
+            const creditLabelEl = this.overlay.querySelector('.modal-credit-label');
+            if (creditValueEl) creditValueEl.textContent = `от ${formatNum(monthlyPayment)} ₽/мес`;
+            if (creditLabelEl) creditLabelEl.textContent = `В КРЕДИТ ДО ${APP_CONFIG.credit.termYears} ЛЕТ`;
+
             const priceContainer = this.overlay.querySelector('#modalPriceBlock');
             if (priceContainer) {
                 if (car.price) {
                     if (car.max_discount > 0) {
                         priceContainer.innerHTML = `
                             <div class="modal-price-row">
-                                <span class="modal-price">${formatNum(car.price - car.max_discount)} ₽</span>
+                                <span class="modal-price">${formatNum(currentPrice)} ₽</span>
                                 <span class="modal-price-old">${formatNum(car.price)} ₽</span>
                             </div>
                             <div class="modal-discount-badge">Выгода до ${formatNum(car.max_discount)} ₽</div>
@@ -615,7 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (f.type === 'toggle') {
                 html += `<div class="toggle-row" id="tog-${f.key}" data-key="${f.key}"></div>`;
             }
-            html += `</div><div class="f-sep"></div>`;
+            html += `</div>`;
         });
         
         container.innerHTML = html;
@@ -961,7 +1019,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeDrawer();
     });
 
-    // ========== ЛОГИКА СОКРАЩЕННОГО КАТАЛОГА ==========
     function initRandomCatalog() {
         if (!hasRandomCatalog) return;
         const shuffled = cars.sort(() => 0.5 - Math.random());
@@ -969,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCards(randomCars, FDOM.randomGrid);
     }
 
-    // ========== РЕНДЕР КАРТОЧЕК ==========
+    // ========== РЕНДЕР КАРТОЧЕК==========
     function createCardHTML(car) {
         const imgSrc = (Array.isArray(car.images) && car.images.length) ? car.images[0] : PLACEHOLDER_IMG;
         const hasCarousel = car.images && car.images.length > 1;
@@ -978,17 +1035,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentPrice = car.price - (car.max_discount || 0);
         
         let badgesHTML = `<span class="badge-stock">В наличии</span>`;
-        if (hasDiscount) {
-            badgesHTML += `<span class="badge-discount">Скидка</span>`;
-        }
+        if (hasDiscount) badgesHTML += `<span class="badge-discount">Скидка</span>`;
 
         let priceHTML = '';
         if (car.price) {
             if (hasDiscount) {
-                priceHTML = `
-                    <span class="price-main price-new">${escapeHtml(formatNum(currentPrice))} ₽</span>
-                    <span class="price-old">${escapeHtml(formatNum(car.price))} ₽</span>
-                `;
+                priceHTML = `<span class="price-main price-new">${escapeHtml(formatNum(currentPrice))} ₽</span>
+                             <span class="price-old">${escapeHtml(formatNum(car.price))} ₽</span>`;
             } else {
                 priceHTML = `<span class="price-main price-new">${escapeHtml(formatNum(car.price))} ₽</span>`;
             }
@@ -996,12 +1049,14 @@ document.addEventListener('DOMContentLoaded', () => {
             priceHTML = `<span class="price-main price-new">Цена по запросу</span>`;
         }
         
+        // Вычисляем ежемесячный платеж для карточки
+        const monthlyPayment = calculateMonthlyPayment(currentPrice);
+
         return `
             <div class="car-card product-card" data-id="${escapeHtml(car.id)}">
                 <div class="card-img-wrap image-container">
                     <img data-src="${escapeHtml(imgSrc)}" alt="${escapeHtml(car.mark_id)}" loading="lazy" class="lazy-image" data-idx="0">
-                    <div class="img-badges">${badgesHTML}</div>
-                    ${hasCarousel ? `<button class="carousel-button prev" aria-label="Назад"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="carousel-button next" aria-label="Вперед"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></button>` : ''}
+                    <div class="img-badges">${badgesHTML}</div>${hasCarousel ? `<button class="carousel-button prev" aria-label="Назад"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="carousel-button next" aria-label="Вперед"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></button>` : ''}
                 </div>
                 <div class="card-body card-content">
                     <h3 class="card-name card-title">${escapeHtml(car.mark_id)}</h3>
@@ -1010,11 +1065,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${car.run ? `<span class="ctag spec-value">${escapeHtml(formatNum(car.run))} км</span>` : ''}
                         ${car.gearbox ? `<span class="ctag spec-value">${escapeHtml(car.gearbox)}</span>` : ''}
                     </div>
-                    <div class="card-pricing card-price">
-                        ${priceHTML}
-                    </div>
+                    <div class="card-pricing card-price">${priceHTML}</div>
+                    
                     <div class="card-btns card-buttons">
-                        <a href="#popup:model" class="card-btn btn-outline" data-car-title="${escapeHtml(car.mark_id)}">Оставить заявку</a>
+                        <a href="#popup:model" class="card-btn card-btn-primary" data-car-title="${escapeHtml(car.mark_id)}">Оставить заявку</a>
+                        <a href="#popup:report" class="card-btn card-btn-credit" data-car-title="${escapeHtml(car.mark_id)}">от ${formatNum(monthlyPayment)} ₽/мес</a>
                     </div>
                 </div>
             </div>`;
@@ -1026,7 +1081,6 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = list.map(car => createCardHTML(car)).join('');
         
         if (lazyObserver) lazyObserver.disconnect();
-        
         lazyObserver = new IntersectionObserver((entries, obs) => {
             entries.forEach(entry => {
                 if(entry.isIntersecting) {
@@ -1037,7 +1091,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-        
         container.querySelectorAll('img.lazy-image').forEach(img => lazyObserver.observe(img));
     }
 
@@ -1194,32 +1247,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // === ПРИМЕНЕНИЕ ТЕМЫ ПРИ ЗАГРУЗКЕ ===
+    if (APP_CONFIG.themeColor) {
+        window.makeCatalogApplyTheme(APP_CONFIG.themeColor, APP_CONFIG.themeMode);
+    }
+    
+    // === ДЕБАГ ===
     if (window.__MAKE_DEBUG_UTILS__) {
         const D = window.__MAKE_DEBUG_UTILS__;
         loadCarsData = D.debugWrap(loadCarsData, 'loadCarsData');
         applyFilters = D.debugWrap(applyFilters, 'applyFilters');
-        
         D.debugWrapPrototype(URLManager.prototype, 'URLManager');
         D.debugWrapPrototype(CarDetailModal.prototype, 'CarDetailModal', ['prevImage', 'nextImage']);
-
-        window.makeCatalogDebug = {
-            dump: function(label = 'manual-dump') {
-                D.debugLog('SNAPSHOT ' + label, { carsCount: cars.length, filteredCount: filteredCars.length, urlState: window.location.search });
-                if (cars.length) D.debugTable('dump.cars', cars);
-                return { cars, filteredCars, lastLeadCar, currentPage, pageSize };
-            },
-            clearCache: async () => {
-                const db = await openCacheDB();
-                db.transaction('feed', 'readwrite').objectStore('feed').delete('current');
-                D.debugLog('CACHE', 'Кэш IndexedDB принудительно очищен');
-            }
-        };
-        D.debugInfo('INIT', 'Дебаггер подключен. Введите makeCatalogDebug.dump() в консоль.');
-    }
-
-    // === ПРИМЕНЕНИЕ ТЕМЫ ПРИ ЗАГРУЗКЕ ===
-    if (APP_CONFIG.themeColor) {
-        applySmartTheme(APP_CONFIG.themeColor);
     }
     
     loadCarsData();
