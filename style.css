@@ -497,52 +497,16 @@
 /* ================================================================
    11. ЛЕЙАУТ ВИТРИНА (SHOWCASE) - ПРОМО-БЛОК
 ================================================================ */
-.make-catalog[data-filter-layout="showcase"] .catalog-wrap {
-  max-width: 1440px; 
-  margin: 0 auto; 
-  /* Добавляем много "воздуха" сверху и снизу, чтобы блок смотрелся самостоятельно */
-  padding: 80px 40px; 
-  display: block; 
-}
+.make-catalog[data-filter-layout="showcase"] .catalog-wrap { max-width: 1440px; margin: 0 auto; padding: 80px 40px; display: block; }
+.make-catalog[data-filter-layout="showcase"] .cards-container::before { content: "Специальные предложения"; display: block; font-family: var(--font-d); font-size: clamp(28px, 3vw, 40px); font-weight: 800; color: var(--color-text-main); text-align: center; margin-bottom: 48px; letter-spacing: -0.5px;}
+.make-catalog[data-filter-layout="showcase"] .car-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 32px;}
 
-/* Генерируем заголовок витрины через CSS (без вмешательства в HTML) */
-.make-catalog[data-filter-layout="showcase"] .cards-container::before {
-  content: "Специальные предложения";
-  display: block;
-  font-family: var(--font-d);
-  font-size: clamp(28px, 3vw, 40px);
-  font-weight: 800;
-  color: var(--color-text-main);
-  text-align: center;
-  margin-bottom: 48px;
-  letter-spacing: -0.5px;
-}
-
-/* Делаем карточки в витрине чуть крупнее и увеличиваем между ними отступы */
-.make-catalog[data-filter-layout="showcase"] .car-grid {
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 32px;
-}
-
-/* Если карточек мало, не даем им растянуться на весь экран до состояния гигантов */
 @media (min-width: 1140px) {
-  .make-catalog[data-filter-layout="showcase"] .car-grid {
-    grid-template-columns: repeat(auto-fit, minmax(320px, 400px));
-    justify-content: center; /* Центрируем сетку */
-  }
+   .make-catalog[data-filter-layout="showcase"] .car-grid {grid-template-columns: repeat(auto-fit, minmax(320px, 400px)); justify-content: center;}
 }
 
-/* Адаптив витрины для мобильных устройств */
-@media (max-width: 900px) {
-  .make-catalog[data-filter-layout="showcase"] .catalog-wrap {
-    padding: 48px 20px;
-  }
-  .make-catalog[data-filter-layout="showcase"] .cards-container::before {
-    margin-bottom: 32px;
-  }
-  .make-catalog[data-filter-layout="showcase"] .car-grid {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
+@media (max-width: 900px) { .make-catalog[data-filter-layout="showcase"] .catalog-wrap { padding: 48px 20px; }
+  .make-catalog[data-filter-layout="showcase"] .cards-container::before { margin-bottom: 32px; }
+  .make-catalog[data-filter-layout="showcase"] .car-grid { grid-template-columns: 1fr; gap: 24px; }
 }
 </style>
