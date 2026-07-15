@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ],
         cacheName: 'make_catalog_cache',
         cacheTTL: 25 * 60 * 1000, 
-        autoLayoutThreshold: 5, // Умный порог: если включено > 5 фильтров, панель станет горизонтальной на ПК
+        autoLayoutThreshold: 5, 
         
         filters: [
             { key: 'original_mark_id', type: 'select', label: 'Марка',           enabled: true },
@@ -347,8 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.overlay.querySelector('#modalTitle').textContent = car.mark_id;
             
-            // ВНЕДРЕНИЕ СКИДОК ИЗ ФИДА: Выводим старую цену и шильдик выгоды
-            const priceContainer = this.overlay.querySelector('.modal-price-block');
+            const priceContainer = this.overlay.querySelector('#modalPriceBlock');
             if (priceContainer) {
                 if (car.price) {
                     if (car.max_discount > 0) {
@@ -380,8 +379,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.overlay.style.display = 'flex';
             this.overlay.classList.remove('hidden');
             
-            const rightCol = this.overlay.querySelector('.modal-right');
-            if (rightCol) rightCol.scrollTop = 0;
+            const rightColContent = this.overlay.querySelector('.modal-right-content');
+            if (rightColContent) rightColContent.scrollTop = 0;
             
             document.addEventListener('keydown', this.handleKeyDown);
             
@@ -523,7 +522,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('filters-container');
         if (!container) return;
 
-        // SMART LAYOUT: Динамическое переключение сетки на основе конфига из репозитория
         const catalogRoot = document.querySelector('.make-catalog');
         if (catalogRoot) {
             const enabledFiltersCount = APP_CONFIG.filters.filter(f => f.enabled).length;
@@ -1024,7 +1022,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 model: data.model || '',
                 year: data.year,
                 price: parseInt(data.price) || 0,
-                max_discount: parseInt(data.max_discount) || 0, // Поддержка скидки из фида
+                max_discount: parseInt(data.max_discount) || 0,
                 run: parseInt(data.run) || 0,
                 gearbox: data.gearbox,
                 drive: data.drive,

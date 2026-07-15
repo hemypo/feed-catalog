@@ -121,7 +121,6 @@
 .make-catalog .btn-apply:hover { background: var(--color-primary-hover); }
 .make-catalog .btn-apply:active { transform: scale(0.98); }
 
-/* Multiselect */
 .make-catalog .multiselect { position: relative; }
 .make-catalog .multiselect-trigger {
   width: 100%; min-height: 40px; padding: 6px 32px 6px 12px; border-radius: var(--radius-sm);
@@ -206,7 +205,7 @@
 .make-catalog .no-results, .make-catalog .loader { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--color-text-muted); font-size: 16px; }
 
 /* ================================================================
-   6. ПАГИНАЦИЯ (ВЫРАВНИВАНИЕ СПРАВА)
+   6. ПАГИНАЦИЯ
 ================================================================ */
 .make-catalog .pagination-container { display: flex; flex-direction: column; gap: 16px; align-items: center; margin-top: 8px; padding: 24px; background: var(--color-white); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
 .make-catalog .pagination-info { display: flex; justify-content: space-between; align-items: center; width: 100%; }
@@ -221,14 +220,26 @@
 .make-catalog .pagination-ellipsis { padding: 0 8px; color: var(--color-text-muted); align-self: center; font-weight: 600; }
 
 /* ================================================================
-   7. СТИЛИ СКИДОК ДЛЯ МОДАЛЬНОГО ОКНА
+   7. SKELETON LOADERS
+================================================================ */
+.make-catalog .skeleton-card { background: var(--color-white); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-card); display: flex; flex-direction: column; }
+.make-catalog .skeleton-image { aspect-ratio: 16 / 10; background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
+.make-catalog .skeleton-content { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.make-catalog .skeleton-line { height: 14px; border-radius: 5px; background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
+.make-catalog .skeleton-line.title { height: 20px; width: 70%; }
+.make-catalog .skeleton-line.price { height: 24px; width: 40%; margin-top: auto; }
+.make-catalog .skeleton-btn { height: 44px; border-radius: var(--radius-sm); margin-top: 14px; background: linear-gradient(90deg, #ececf2 25%, #e2e2ea 50%, #ececf2 75%); background-size: 200% 100%; animation: make-shimmer 1.6s infinite; }
+@keyframes make-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+/* ================================================================
+   8. СКИДКИ
 ================================================================ */
 .make-catalog .modal-price-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .make-catalog .modal-price-old { font-size: 18px; font-weight: 500; color: var(--color-text-muted); text-decoration: line-through; }
 .make-catalog .modal-discount-badge { display: inline-block; background: #FFF0F2; color: #FF3B30; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; margin-top: 6px; font-family: var(--font-b); }
 
 /* ================================================================
-   8. МОДАЛЬНОЕ ОКНО (PREMIUM DESKTOP UI)
+   9. МОДАЛЬНОЕ ОКНО
 ================================================================ */
 .make-catalog .modal-overlay {
   position: fixed; inset: 0; background: rgba(10, 10, 40, 0.6); backdrop-filter: blur(8px);
@@ -246,21 +257,38 @@
   transform: translateY(20px) scale(0.98); transition: transform .3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .make-catalog .modal-overlay.visible .modal-box { transform: translateY(0) scale(1); }
-.make-catalog .modal-close { position: absolute; top: 24px; right: 24px; width: 36px; height: 36px; background: var(--color-bg-main); border: none; border-radius: 50%; font-size: 20px; color: var(--color-text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 20; transition: background .2s; }
+
+.make-catalog .modal-close {
+  position: absolute; top: 24px; right: 24px; width: 36px; height: 36px;
+  background: var(--color-bg-main); border: none; border-radius: 50%;
+  font-size: 20px; color: var(--color-text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; z-index: 20; transition: background .2s;
+}
 .make-catalog .modal-close:hover { background: #E4E6F0; color: var(--color-text-main); }
 
-/* ГАЛЕРЕЯ НЕПРЕРЫВНАЯ */
+/* ГАЛЕРЕЯ */
 .make-catalog .modal-left { width: 55%; background: transparent; display: flex; flex-direction: column; gap: 12px; position: relative; }
 .make-catalog .modal-gallery { flex: 1; position: relative; width: 100%; overflow: hidden; border-radius: 16px; background: var(--color-bg-main); }
-.make-catalog .modal-gallery-track { display: flex; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; overflow-x: hidden; scroll-snap-type: none; scroll-behavior: smooth; scrollbar-width: none; gap: 16px; padding-bottom: 16px; }
+.make-catalog .modal-gallery-track {
+  display: flex; width: 100%; height: 100%; 
+  flex-direction: column; overflow-y: auto; overflow-x: hidden; 
+  scroll-snap-type: none; scroll-behavior: smooth; scrollbar-width: none;
+  gap: 16px; padding-bottom: 16px;
+}
 .make-catalog .modal-gallery-track::-webkit-scrollbar { display: none; }
 .make-catalog .modal-gallery-track img { flex: 0 0 auto; width: 100%; height: auto; object-fit: cover; border-radius: 12px; }
 
-.make-catalog .modal-nav-prev, .make-catalog .modal-nav-next { position: absolute; right: 16px; width: 44px; height: 44px; background: rgba(255, 255, 255, 0.95); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .2s; box-shadow: 0 4px 12px rgba(0,0,0,.15); color: var(--color-text-main); z-index: 10; }
+.make-catalog .modal-nav-prev, .make-catalog .modal-nav-next {
+  position: absolute; right: 16px; width: 44px; height: 44px;
+  background: rgba(255, 255, 255, 0.95); border: none; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; 
+  transition: transform .2s; box-shadow: 0 4px 12px rgba(0,0,0,.15); color: var(--color-text-main); z-index: 10;
+}
 .make-catalog .modal-nav-prev svg, .make-catalog .modal-nav-next svg { width: 24px; height: 24px; }
 .make-catalog .modal-nav-prev { bottom: 76px; } 
 .make-catalog .modal-nav-next { bottom: 16px; } 
 .make-catalog .modal-nav-prev:hover, .make-catalog .modal-nav-next:hover { transform: scale(1.08); background: #FFF; }
+
 .make-catalog .modal-counter { position: absolute; top: 16px; left: 16px; background: rgba(26,27,34,.7); color: #FFF; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; backdrop-filter: blur(4px); }
 .make-catalog .modal-thumbs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .make-catalog .modal-thumbs::-webkit-scrollbar { display: none; }
@@ -269,9 +297,15 @@
 .make-catalog .modal-thumb.is-active { border-color: var(--color-text-main); opacity: 1; }
 .make-catalog .modal-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-/* ИНФО-КОЛОНКА (С отступом под фиксированный футер) */
-.make-catalog .modal-right { width: 45%; overflow-y: auto; overflow-x: visible; padding: 0 24px 120px 0; position: relative; display: flex; flex-direction: column; scrollbar-width: none; }
-.make-catalog .modal-right::-webkit-scrollbar { display: none; }
+/* ПРАВАЯ ЧАСТЬ - УМНАЯ СТРУКТУРА С ФИКСИРОВАННЫМИ КНОПКАМИ */
+.make-catalog .modal-right { 
+  width: 45%; display: flex; flex-direction: column; overflow: hidden; /* Ограничиваем контейнер */
+}
+.make-catalog .modal-right-content { 
+  flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 24px 24px 0; scrollbar-width: none; 
+}
+.make-catalog .modal-right-content::-webkit-scrollbar { display: none; }
+
 .make-catalog .modal-status { font-size: 11px; color: #00B35A; font-weight: 800; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
 .make-catalog .status-dot { width: 6px; height: 6px; background: #00B35A; border-radius: 50%; }
 .make-catalog .modal-title { font-family: var(--font-d); font-size: 32px; font-weight: 800; line-height: 1.2; margin-bottom: 16px; color: var(--color-text-main); }
@@ -292,38 +326,28 @@
 .make-catalog .modal-spec-value { font-size: 14px; font-weight: 800; color: var(--color-text-main); }
 .make-catalog .modal-description { font-size: 14px; line-height: 1.6; color: var(--color-text-secondary); white-space: pre-wrap; padding-bottom: 40px;}
 
-/* ЖЕСТКАЯ ФИКСАЦИЯ КНОПОК ПОД ИНФО-КОЛОНКОЙ (БЕЗ ОБРЕЗАНИЯ) */
-.make-catalog .modal-box .modal-action-bar {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  width: calc(45% - 12px); 
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(8px);
-  padding: 16px 0 0 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border-top: 1px solid var(--color-border);
-  z-index: 10;
+/* ПАНЕЛЬ КНОПОК - НАМЕРТВО ЗАФИКСИРОВАНА ВНИЗУ */
+.make-catalog .modal-action-bar { 
+  flex-shrink: 0; padding: 24px 24px 0 0; background: var(--color-white); 
+  display: flex; align-items: center; gap: 12px; z-index: 10;
 }
-.make-catalog .modal-action-bar a { text-decoration: none; display: block; margin: 0; padding: 0; }
-.make-catalog .modal-action-bar a:first-child { flex: 1; }
-.make-catalog .modal-action-bar a:last-child { flex: 0 0 52px; }
-
-.make-catalog .modal-apply-btn {
-  width: 100%; height: 52px; background: var(--color-text-main); color: var(--color-white);
-  border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer;
-  transition: background .2s; display: flex; align-items: center; justify-content: center;
-  padding: 0 24px; white-space: nowrap; box-sizing: border-box;
+.make-catalog .modal-apply-btn { 
+  flex: 1 1 auto; height: 52px; background: var(--color-text-main); color: var(--color-white) !important; 
+  border-radius: 8px; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; 
+  text-decoration: none; padding: 0 24px; box-sizing: border-box; white-space: nowrap; transition: background .2s; 
 }
 .make-catalog .modal-apply-btn:hover { background: #000; }
-.make-catalog .modal-phone-btn { flex: 0 0 52px; width: 52px; height: 52px; border: 1.5px solid var(--color-border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--color-text-main); transition: all .2s; background: transparent; padding: 0; }
-.make-catalog .modal-phone-btn svg { width: 24px; height: 24px; margin: 0; }
+
+.make-catalog .modal-phone-btn { 
+  flex: 0 0 52px; width: 52px; height: 52px; border: 1.5px solid var(--color-border); border-radius: 8px; 
+  display: flex; align-items: center; justify-content: center; color: var(--color-text-main) !important; 
+  background: transparent; transition: all .2s; box-sizing: border-box; text-decoration: none; 
+}
+.make-catalog .modal-phone-btn svg { width: 24px; height: 24px; }
 .make-catalog .modal-phone-btn:hover { border-color: var(--color-text-main); background: var(--color-bg-main); }
 
 /* ================================================================
-   9. АДАПТИВ (MOBILE)
+   10. АДАПТИВ (MOBILE)
 ================================================================ */
 @media (max-width: 1140px) {
   .make-catalog[data-filter-layout="vertical"] .catalog-wrap { grid-template-columns: 240px 1fr; padding: 20px 24px; }
@@ -355,16 +379,15 @@
   .make-catalog .modal-counter { top: auto; bottom: 16px; right: 16px; left: auto; }
 
   .make-catalog .modal-thumbs { display: none; } 
-  .make-catalog .modal-right { width: 100%; padding: 24px 20px 120px; flex: 1; }
+  
+  /* Структура для телефона: правая колонка занимает весь остаток */
+  .make-catalog .modal-right { width: 100%; flex: 1; padding: 0; }
+  .make-catalog .modal-right-content { padding: 24px 20px 24px; }
+  .make-catalog .modal-action-bar { padding: 16px 20px; border-top: 1px solid var(--color-border); background: #FFF; }
+  
   .make-catalog .modal-close { top: 12px; right: 12px; width: 36px; height: 36px; background: rgba(0,0,0,0.5); color: #FFF; }
   .make-catalog .modal-title { font-size: 24px; padding-right: 40px; }
   .make-catalog .modal-price { font-size: 28px; }
-  
-  /* Фиксированная панель кнопок на мобильных */
-  .make-catalog .modal-box .modal-action-bar { 
-    position: absolute; bottom: 0; left: 0; right: 0; width: 100%; padding: 16px 20px; 
-    background: #FFF; border-top: 1px solid var(--color-border); box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
-  }
 }
 
 @media (max-width: 600px) {
@@ -375,17 +398,28 @@
 /* МОБИЛЬНАЯ ШТОРКА (DRAWER) С УМНЫМ СКРЫТИЕМ */
 .make-catalog .mob-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 300; backdrop-filter: blur(2px); }
 .make-catalog .mob-overlay.is-open { display: block; }
-.make-catalog .mob-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: min(320px, 90vw); background: var(--color-white); z-index: 301; display: flex; flex-direction: column; visibility: hidden; transform: translateX(-100%); transition: transform .3s ease, visibility 0s linear .3s; }
-.make-catalog .mob-drawer.is-open { visibility: visible; transform: translateX(0); transition: transform .3s ease, visibility 0s linear 0s; }
+
+.make-catalog .mob-drawer { 
+  position: fixed; top: 0; left: 0; bottom: 0; width: min(320px, 90vw); 
+  background: var(--color-white); z-index: 301; display: flex; flex-direction: column;
+  visibility: hidden; transform: translateX(-100%); transition: transform .3s ease, visibility 0s linear .3s;
+}
+.make-catalog .mob-drawer.is-open { 
+  visibility: visible; transform: translateX(0); transition: transform .3s ease, visibility 0s linear 0s;
+}
+
 .make-catalog .drawer-top { display: flex; align-items: center; justify-content: space-between; padding: 20px; border-bottom: 1px solid var(--color-border); }
 .make-catalog .drawer-title { font-family: var(--font-d); font-size: 18px; font-weight: 800; }
 .make-catalog .btn-close { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: none; border: none; cursor: pointer; color: var(--color-text-muted); }
 .make-catalog .drawer-body { padding: 20px; overflow-y: auto; flex: 1; }
+
 .make-catalog .drawer-body #filters-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px; align-items: end; }
-.make-catalog .drawer-body .filter-group:has(.minmax-row), .make-catalog .drawer-body .filter-group:has(.toggle-row), .make-catalog .drawer-body .filter-group.sort-group { grid-column: 1 / -1; }
+.make-catalog .drawer-body .filter-group:has(.minmax-row),
+.make-catalog .drawer-body .filter-group:has(.toggle-row),
+.make-catalog .drawer-body .filter-group.sort-group { grid-column: 1 / -1; }
 
 /* ================================================================
-   10. СОКРАЩЕННЫЙ ВИДЖЕТ (RANDOM BLOCK)
+   11. СОКРАЩЕННЫЙ ВИДЖЕТ (RANDOM BLOCK)
 ================================================================ */
 .make-catalog[data-make-catalog="random"] .make-random-wrap { max-width: 1440px; margin: 0 auto; padding: 24px 40px; }
 </style>
